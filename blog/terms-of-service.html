@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — SnapClaps | OopsLuxEscapes</title>
+  <meta name="description" content="Terms of Service for SnapClaps. Please read our terms carefully before using our website and services." />
+  <meta name="keywords" content="terms of service, terms of use, website terms, conditions" />
+  <meta property="og:title" content="Terms of Service — SnapClaps" />
+  <meta property="og:description" content="SnapClaps Terms of Service and Conditions of Use." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://snapclaps.com/blog/terms-of-service.html" />
+  <link rel="canonical" href="https://snapclaps.com/blog/terms-of-service.html" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #E8622A;
+      --orange-light: #FF7A42;
+      --navy: #1A2230;
+      --navy-light: #243042;
+      --gold: #D4A853;
+      --gold-light: #F0D090;
+      --cream: #FFFAF5;
+      --light-bg: #F8F6F3;
+      --text: #1A2230;
+      --text-secondary: #555E6E;
+      --text-muted: #8890A0;
+      --white: #FFFFFF;
+      --border: #E8E4DF;
+      --shadow: rgba(26,34,48,0.08);
+      --shadow-lg: rgba(26,34,48,0.14);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--text); line-height: 1.6; background: var(--white); }
+    img { max-width: 100%; height: auto; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ========= NAVIGATION ========= */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 68px; }
+    .nav-logo { font-size: 24px; font-weight: 800; }
+    .nav-logo span { color: var(--orange); }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { font-size: 15px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
+    .nav-links a:hover { color: var(--orange); }
+    .nav-cta { background: var(--orange); color: white !important; padding: 10px 22px; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+    .nav-cta:hover { background: var(--orange-light); transform: translateY(-1px); }
+    .nav-handle { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .mobile-menu { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+    .mobile-menu svg { width: 24px; height: 24px; stroke: var(--text); }
+
+    /* ========= LEGAL PAGE HEADER ========= */
+    .page-header { padding: 140px 24px 60px; background: linear-gradient(135deg, var(--cream) 0%, #FFF5EE 40%, #F0E8FF 100%); text-align: center; }
+    .page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 6vw, 52px); font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .page-header p { font-size: 16px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; }
+    .page-updated { font-size: 14px; color: var(--text-muted); margin-top: 12px; }
+
+    /* ========= CONTENT ========= */
+    .content { max-width: 900px; margin: 0 auto; padding: 60px 24px; }
+    .content h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin: 32px 0 16px; color: var(--navy); }
+    .content h3 { font-size: 20px; font-weight: 700; margin: 24px 0 12px; color: var(--navy); }
+    .content p { margin: 12px 0; font-size: 15px; line-height: 1.7; color: var(--text-secondary); }
+    .content ul, .content ol { margin: 16px 0 16px 24px; }
+    .content li { margin: 8px 0; font-size: 15px; line-height: 1.6; color: var(--text-secondary); }
+    .content strong { color: var(--text); font-weight: 600; }
+    .content a { color: var(--orange); font-weight: 500; }
+    .content a:hover { text-decoration: underline; }
+    .info-box { background: var(--light-bg); border-left: 4px solid var(--orange); padding: 20px; margin: 24px 0; border-radius: 8px; }
+    .info-box strong { display: block; margin-bottom: 8px; }
+    .warning-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 24px 0; border-radius: 8px; }
+    .toc { background: var(--cream); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 32px 0; }
+    .toc h3 { margin-top: 0; }
+    .toc ul { margin: 12px 0 0 24px; }
+    .toc li { margin: 6px 0; }
+    .toc a { color: var(--orange); font-weight: 500; }
+
+    /* ========= FOOTER ========= */
+    .footer { background: var(--navy); color: white; padding: 60px 24px 32px; margin-top: 60px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    .footer-brand h3 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .footer-brand h3 span { color: var(--orange); }
+    .footer-brand .tagline { color: var(--gold); font-weight: 600; font-size: 14px; margin-bottom: 12px; }
+    .footer-brand p { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+    .footer-col h4 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; color: rgba(255,255,255,0.9); }
+    .footer-col a { display: block; font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 10px; transition: color 0.2s; }
+    .footer-col a:hover { color: var(--orange); }
+    .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-bottom p { font-size: 13px; color: rgba(255,255,255,0.4); }
+    .footer-bottom a { color: var(--orange); }
+
+    /* ========= RESPONSIVE ========= */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-menu { display: block; }
+      .nav-links.active { display: flex; flex-direction: column; position: absolute; top: 68px; left: 0; right: 0; background: white; padding: 20px 24px; gap: 16px; box-shadow: 0 8px 24px var(--shadow); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .page-header { padding: 120px 24px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== NAVIGATION ==================== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">Snap<span>Claps</span></a>
+    <div class="nav-links" id="navLinks">
+      <span class="nav-handle">@oopsluxescapes</span>
+      <a href="/blog/">Blog</a>
+      <a href="/#deals">Deals</a>
+      <a href="/#destinations">Destinations</a>
+      <a href="/#guides">Travel Tips</a>
+      <a href="/#about">About</a>
+      <a href="/#contact">Contact</a>
+      <a href="https://www.tiktok.com/@oopsluxescapes" class="nav-cta" target="_blank">Follow Us</a>
+    </div>
+    <button class="mobile-menu" onclick="document.getElementById('navLinks').classList.toggle('active')">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ==================== PAGE HEADER ==================== -->
+<section class="page-header">
+  <h1>Terms of Service</h1>
+  <p>Please read these terms carefully. By using SnapClaps, you agree to comply with all terms and conditions.</p>
+  <p class="page-updated">Last updated: April 2026</p>
+</section>
+
+<!-- ==================== CONTENT ==================== -->
+<div class="content">
+
+  <div class="toc">
+    <h3>Quick Navigation</h3>
+    <ul>
+      <li><a href="#acceptance">1. Acceptance of Terms</a></li>
+      <li><a href="#website-use">2. Website Use & Prohibited Activities</a></li>
+      <li><a href="#affiliate-links">3. Affiliate Links & Third-Party Services</a></li>
+      <li><a href="#no-guarantees">4. No Guarantees on Pricing or Availability</a></li>
+      <li><a href="#deals-disclosures">5. Deal Information & Disclaimers</a></li>
+      <li><a href="#user-content">6. User-Generated Content</a></li>
+      <li><a href="#intellectual-property">7. Intellectual Property Rights</a></li>
+      <li><a href="#limitation-liability">8. Limitation of Liability</a></li>
+      <li><a href="#indemnification">9. Indemnification</a></li>
+      <li><a href="#dispute-resolution">10. Dispute Resolution & Governing Law</a></li>
+      <li><a href="#contact-us">11. Contact Us</a></li>
+    </ul>
+  </div>
+
+  <h2 id="acceptance">1. Acceptance of Terms</h2>
+  <p>By accessing and using snapclaps.com (including all subpages, content, services, and links), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our website.</p>
+
+  <p>These terms apply to all visitors, users, and anyone accessing our website or services. Varshyl Inc (operating as SnapClaps | OopsLuxEscapes) reserves the right to modify these terms at any time. Changes become effective immediately upon posting. Continued use of the website constitutes acceptance of updated terms.</p>
+
+  <div class="warning-box">
+    <strong>Important:</strong> SnapClaps is a travel deal curation and affiliate marketing platform. We are not a travel agent, airline, hotel provider, or booking platform. We provide links to third-party booking sites.
+  </div>
+
+  <h2 id="website-use">2. Website Use & Prohibited Activities</h2>
+
+  <h3>2.1 Permitted Use</h3>
+  <p>You may use SnapClaps to:</p>
+  <ul>
+    <li>Browse travel deals and information</li>
+    <li>Read blog articles, guides, and travel tips</li>
+    <li>Click links to booking platforms and affiliate partners</li>
+    <li>Subscribe to our newsletter for deal updates</li>
+    <li>Follow our social media channels (TikTok, Instagram)</li>
+    <li>Share content with friends and family</li>
+  </ul>
+
+  <h3>2.2 Prohibited Activities</h3>
+  <p>You agree NOT to:</p>
+  <ul>
+    <li>Scrape, crawl, or automatically download our content or affiliate links</li>
+    <li>Use bots, scripts, or automated tools to access our website</li>
+    <li>Attempt to gain unauthorized access to our systems or databases</li>
+    <li>Distribute malware, viruses, or malicious code</li>
+    <li>Harass, threaten, or defame other users or our team</li>
+    <li>Spam or send unsolicited commercial messages via our contact form</li>
+    <li>Reproduce or republish our content without explicit permission</li>
+    <li>Use our affiliate links in misleading or deceptive ways</li>
+    <li>Engage in any activity that could harm or overload our website</li>
+    <li>Violate any applicable laws, regulations, or third-party rights</li>
+  </ul>
+
+  <p>Violation of these terms may result in immediate termination of your access to SnapClaps.</p>
+
+  <h2 id="affiliate-links">3. Affiliate Links & Third-Party Services</h2>
+
+  <h3>3.1 Affiliate Link Disclaimer</h3>
+  <p><strong>SnapClaps contains affiliate links.</strong> When you click a link to Booking.com, Expedia, Airlines, Hotels, GetYourGuide, Viator, or other travel booking platforms, we may earn a referral commission if you make a purchase. <strong>This commission comes from the partner, not from you — your price remains the same.</strong></p>
+
+  <p>Our goal is to curate genuine deals and recommend trustworthy booking platforms. However, we recommend reviewing each booking site's terms and privacy policy before making a purchase.</p>
+
+  <h3>3.2 No Endorsement of Third-Party Sites</h3>
+  <p>We link to external websites for your convenience, but we do not endorse, guarantee, or take responsibility for:</p>
+  <ul>
+    <li>The accuracy, completeness, or legality of third-party content</li>
+    <li>The quality of products or services offered by third parties</li>
+    <li>Privacy practices or data security on external websites</li>
+    <li>Any disputes, fraud, or issues arising from third-party transactions</li>
+    <li>Customer service or refund policies of booking platforms</li>
+  </ul>
+
+  <h3>3.3 Your Use of Third-Party Sites</h3>
+  <p>Your use of external booking platforms, airlines, hotels, and travel agencies is governed by their own terms of service and privacy policies. You acknowledge that:</p>
+  <ul>
+    <li>SnapClaps is not a party to your booking or transaction</li>
+    <li>You use third-party sites at your own risk</li>
+    <li>Disputes regarding bookings, refunds, or cancellations must be resolved directly with the booking platform</li>
+    <li>SnapClaps cannot mediate disputes between you and third-party providers</li>
+  </ul>
+
+  <h2 id="no-guarantees">4. No Guarantees on Pricing or Availability</h2>
+
+  <div class="warning-box">
+    <strong>Critical Disclaimer:</strong> SnapClaps provides information about travel deals at the time of posting. We make NO guarantees regarding:
+  </div>
+
+  <ul>
+    <li><strong>Price Accuracy:</strong> Prices may change without notice. We are not responsible if prices differ from what we posted.</li>
+    <li><strong>Deal Availability:</strong> Error fares and flash sales expire quickly. Deals may no longer be available when you click the link.</li>
+    <li><strong>Booking Success:</strong> Some deals have booking restrictions, blackout dates, or may be unavailable to certain regions.</li>
+    <li><strong>Accuracy of Information:</strong> We do our best to verify deals, but errors can occur. Third-party websites are the source of truth.</li>
+    <li><strong>Route Availability:</strong> Flights may be unavailable on requested dates. Hotel rooms may sell out before you complete your booking.</li>
+    <li><strong>Refund Policies:</strong> Non-refundable fares, strict cancellation policies, and booking terms vary by provider. Always review before booking.</li>
+  </ul>
+
+  <p>By clicking a link and completing a booking, you acknowledge that you have reviewed pricing, terms, and availability directly on the booking site.</p>
+
+  <h2 id="deals-disclosures">5. Deal Information & Disclaimers</h2>
+
+  <h3>5.1 Error Fare Warnings</h3>
+  <p><strong>Error Fares:</strong> Occasionally, airlines or booking sites make pricing mistakes. While these deals are real, airlines sometimes cancel bookings made at error prices. If you book an error fare:</p>
+  <ul>
+    <li>The airline has the right to cancel the booking</li>
+    <li>A refund may be issued (depending on airline policy)</li>
+    <li>SnapClaps is not responsible if your booking is cancelled</li>
+  </ul>
+
+  <p>We disclose error fares clearly and recommend reviewing the airline's cancellation policy before booking.</p>
+
+  <h3>5.2 Flash Sale & Limited-Time Deal Terms</h3>
+  <p>Flash sales and limited-time offers have restrictions:</p>
+  <ul>
+    <li>Deals are subject to availability and may expire within hours</li>
+    <li>Some deals are only available to new customers or specific regions</li>
+    <li>Seat inventory may be extremely limited</li>
+    <li>Travel dates may be restricted or blackout dates may apply</li>
+  </ul>
+
+  <p>Always review the booking site's terms before completing your purchase.</p>
+
+  <h3>5.3 No Professional Travel Advice</h3>
+  <p>SnapClaps provides curated deal information, not personalized travel advice. We are not travel agents. For professional assistance with:</p>
+  <ul>
+    <li>Visa requirements and travel documentation</li>
+    <li>Travel insurance recommendations</li>
+    <li>Customized itinerary planning</li>
+    <li>Complex multi-leg bookings</li>
+  </ul>
+
+  <p>...please consult a professional travel agent or government resources (e.g., your country's passport/visa agency).</p>
+
+  <h2 id="user-content">6. User-Generated Content</h2>
+
+  <p>If you submit comments, messages, feedback, or content to SnapClaps via our contact form or social media:</p>
+  <ul>
+    <li>You grant SnapClaps a non-exclusive, worldwide, royalty-free license to use your content</li>
+    <li>Your content may be featured on our website, blog, or social channels (with or without attribution, at our discretion)</li>
+    <li>You represent that your content is original and does not infringe third-party rights</li>
+    <li>You agree to indemnify SnapClaps for any claims arising from your content</li>
+  </ul>
+
+  <p>SnapClaps reserves the right to remove, edit, or refuse any user-generated content that violates these terms or our community standards.</p>
+
+  <h2 id="intellectual-property">7. Intellectual Property Rights</h2>
+
+  <h3>7.1 SnapClaps Owns the Content</h3>
+  <p>All content on SnapClaps—including text, images, videos, layouts, designs, logos, and trademarks—is owned by or licensed to Varshyl Inc. These materials are protected by copyright, trademark, and other intellectual property laws.</p>
+
+  <h3>7.2 Limited License</h3>
+  <p>We grant you a personal, non-exclusive, non-transferable license to view and read content on SnapClaps for personal, non-commercial use. You may NOT:</p>
+  <ul>
+    <li>Reproduce or republish content without written permission</li>
+    <li>Modify, adapt, or create derivative works</li>
+    <li>Sell, rent, or sublicense content</li>
+    <li>Use content for commercial purposes</li>
+    <li>Remove copyright notices or attribution</li>
+  </ul>
+
+  <h3>7.3 SnapClaps Trademarks</h3>
+  <p>SnapClaps, OopsLuxEscapes, the SnapClaps logo, and related marks are trademarks of Varshyl Inc. Unauthorized use of these trademarks is prohibited.</p>
+
+  <h3>7.4 Third-Party Content & Licenses</h3>
+  <p>SnapClaps uses images, fonts, and libraries from third-party providers (Unsplash, Google Fonts, etc.). These materials are used under their respective licenses. Refer to the original sources for usage rights.</p>
+
+  <h2 id="limitation-liability">8. Limitation of Liability</h2>
+
+  <div class="warning-box">
+    <strong>DISCLAIMER OF WARRANTIES:</strong> SnapClaps is provided "AS-IS" without warranties of any kind.
+  </div>
+
+  <h3>8.1 No Express Warranties</h3>
+  <p>SnapClaps does NOT warrant that:</p>
+  <ul>
+    <li>Our website will be error-free or uninterrupted</li>
+    <li>Defects will be corrected</li>
+    <li>Content is accurate, complete, or current</li>
+    <li>Deals will be available or honored by third parties</li>
+    <li>Your bookings will be successful or problem-free</li>
+  </ul>
+
+  <h3>8.2 Limitation on Damages</h3>
+  <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, SNAPCLAPS AND VARSHYL INC SHALL NOT BE LIABLE FOR:</p>
+  <ul>
+    <li>Lost profits or revenue</li>
+    <li>Lost, corrupted, or stolen data</li>
+    <li>Lost business opportunities</li>
+    <li>Indirect, incidental, special, or consequential damages</li>
+    <li>Any damages arising from your use of or inability to use SnapClaps</li>
+    <li>Disputes with third-party booking platforms, airlines, hotels, or travel agencies</li>
+    <li>Errors in deal information or pricing</li>
+    <li>Cancelled bookings or denied boarding</li>
+  </ul>
+
+  <p>Even if SnapClaps has been advised of the possibility of such damages.</p>
+
+  <h3>8.3 Liability Cap</h3>
+  <p>Our total liability to you for all claims arising from use of SnapClaps shall not exceed the amount you paid to SnapClaps (if any). If you paid nothing, our liability is zero.</p>
+
+  <h2 id="indemnification">9. Indemnification</h2>
+
+  <p>You agree to indemnify, defend, and hold harmless Varshyl Inc, SnapClaps, and their officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including attorney's fees) arising from:</p>
+  <ul>
+    <li>Your violation of these terms</li>
+    <li>Your use of the website or affiliate links</li>
+    <li>Your interactions with third-party booking platforms</li>
+    <li>Any content you submit or post</li>
+    <li>Your violation of any applicable law or third-party rights</li>
+  </ul>
+
+  <h2 id="dispute-resolution">10. Dispute Resolution & Governing Law</h2>
+
+  <h3>10.1 Governing Law</h3>
+  <p>These Terms of Service are governed by the laws of the United States (without regard to conflict of law principles). Jurisdiction for disputes arising from these terms shall be exclusive to the courts in the relevant jurisdiction.</p>
+
+  <h3>10.2 Dispute Resolution</h3>
+  <p>If you have a dispute with SnapClaps, please first attempt to resolve it by contacting us at <a href="mailto:hello@snapclaps.com">hello@snapclaps.com</a>. We will make a good-faith effort to address your concern within 14 days.</p>
+
+  <h3>10.3 Binding Arbitration (Optional)</h3>
+  <p>If informal resolution fails, you agree that any legal dispute shall be resolved through binding arbitration under the American Arbitration Association (AAA) rules, not in court. Arbitration is conducted before a neutral arbitrator rather than a judge or jury.</p>
+
+  <h3>10.4 Class Action Waiver</h3>
+  <p>You agree not to participate in any class action lawsuit against SnapClaps. Disputes must be resolved on an individual basis.</p>
+
+  <h2 id="contact-us">11. Contact Us</h2>
+
+  <p>If you have questions about these Terms of Service, please contact:</p>
+
+  <div class="info-box">
+    <strong>SnapClaps — Legal & Support Team</strong><br>
+    Email: <a href="mailto:hello@snapclaps.com">hello@snapclaps.com</a><br>
+    Company: Varshyl Inc<br>
+    Website: snapclaps.com<br>
+    Social: @oopsluxescapes (TikTok, Instagram)
+  </div>
+
+  <h3>Modifications to Terms</h3>
+  <p>We reserve the right to modify these Terms of Service at any time. Changes are effective immediately upon posting to the website. We encourage you to review these terms periodically for updates. Your continued use of SnapClaps after changes indicates your acceptance of the updated terms.</p>
+
+  <p style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-muted);">By using SnapClaps, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree, please do not use our website or services. Thank you for being part of the OopsLuxEscapes community!</p>
+
+</div>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h3>Snap<span>Claps</span></h3>
+        <div class="tagline">OopsLuxEscapes — Luxury Escapes at Oops Prices</div>
+        <p>We hunt down error fares, flash sales, and hidden luxury travel deals so you can see the world without emptying your wallet.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Site</h4>
+        <a href="/">Home</a>
+        <a href="/blog/">Blog</a>
+        <a href="/#deals">Deals</a>
+        <a href="/#destinations">Destinations</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="/blog/privacy-policy.html">Privacy Policy</a>
+        <a href="/blog/terms-of-service.html">Terms of Service</a>
+        <a href="/blog/affiliate-disclosure.html">Affiliate Disclosure</a>
+      </div>
+      <div class="footer-col">
+        <h4>Follow Us</h4>
+        <a href="https://www.tiktok.com/@oopsluxescapes" target="_blank">TikTok — @oopsluxescapes</a>
+        <a href="https://www.instagram.com/oopsluxescapes" target="_blank">Instagram — @oopsluxescapes</a>
+        <a href="mailto:hello@snapclaps.com">Email — hello@snapclaps.com</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 SnapClaps. All rights reserved. A <a href="https://varshyl.com" target="_blank">Varshyl Inc</a> brand.</p>
+      <p><a href="mailto:hello@snapclaps.com">hello@snapclaps.com</a> &nbsp;|&nbsp; <a href="/blog/privacy-policy.html">Privacy</a> &nbsp;|&nbsp; <a href="/blog/terms-of-service.html">Terms</a></p>
+    </div>
+  </div>
+</footer>
+
+<!-- Skimlinks — auto-converts outgoing links to affiliate links -->
+<!-- SKIMLINKS_SNIPPET_PLACEHOLDER — replace with actual snippet after publisher signup at skimlinks.com -->
+
+<!-- Email Subscribe CTA (bottom of article) -->
+<section style="background:linear-gradient(135deg,#1A2230 0%,#243042 100%);padding:60px 24px;text-align:center;margin-top:60px;">
+  <div style="max-width:560px;margin:0 auto;">
+    <p style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#E8622A;margin-bottom:12px;">📬 Deal Alerts</p>
+    <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:clamp(22px,4vw,32px);font-weight:700;color:#fff;margin-bottom:12px;">Get Deals Like This in Your Inbox</h2>
+    <p style="font-size:16px;color:rgba(255,255,255,0.7);margin-bottom:28px;line-height:1.6;">Free subscribers get daily deal alerts. Premium members get instant alerts — 30 minutes before we post publicly.</p>
+    <form action="https://buttondown.email/api/emails/embed-subscribe/oopsluxescapes" method="post" target="_blank" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+      <input type="email" name="email_address" placeholder="Your email address" required style="padding:14px 20px;border-radius:8px;border:none;font-size:15px;width:280px;max-width:100%;" />
+      <button type="submit" style="padding:14px 28px;background:#E8622A;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;">Get Free Alerts ✈️</button>
+    </form>
+    <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:16px;">Free forever. No spam. Unsubscribe anytime.</p>
+    <a href="https://snapclaps.com/#subscribe" style="display:inline-block;padding:10px 24px;background:rgba(255,255,255,0.08);color:#D4A853;border:1px solid rgba(212,168,83,0.4);border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">⚡ Go Premium for Instant Alerts ($9.99/mo) →</a>
+  </div>
+</section>
+
+<!-- Skimlinks auto-affiliate monetization -->
+<script type="text/javascript" src="https://s.skimresources.com/js/301475.skimlinks.js"></script>
+</body>
+</html>

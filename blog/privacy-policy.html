@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — SnapClaps | OopsLuxEscapes</title>
+  <meta name="description" content="Privacy Policy for SnapClaps. Learn how we collect, use, and protect your personal information." />
+  <meta name="keywords" content="privacy policy, data protection, GDPR, CCPA" />
+  <meta property="og:title" content="Privacy Policy — SnapClaps" />
+  <meta property="og:description" content="Learn how SnapClaps handles your personal data." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://snapclaps.com/blog/privacy-policy.html" />
+  <link rel="canonical" href="https://snapclaps.com/blog/privacy-policy.html" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #E8622A;
+      --orange-light: #FF7A42;
+      --navy: #1A2230;
+      --navy-light: #243042;
+      --gold: #D4A853;
+      --gold-light: #F0D090;
+      --cream: #FFFAF5;
+      --light-bg: #F8F6F3;
+      --text: #1A2230;
+      --text-secondary: #555E6E;
+      --text-muted: #8890A0;
+      --white: #FFFFFF;
+      --border: #E8E4DF;
+      --shadow: rgba(26,34,48,0.08);
+      --shadow-lg: rgba(26,34,48,0.14);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--text); line-height: 1.6; background: var(--white); }
+    img { max-width: 100%; height: auto; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ========= NAVIGATION ========= */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 68px; }
+    .nav-logo { font-size: 24px; font-weight: 800; }
+    .nav-logo span { color: var(--orange); }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { font-size: 15px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
+    .nav-links a:hover { color: var(--orange); }
+    .nav-cta { background: var(--orange); color: white !important; padding: 10px 22px; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+    .nav-cta:hover { background: var(--orange-light); transform: translateY(-1px); }
+    .nav-handle { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .mobile-menu { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+    .mobile-menu svg { width: 24px; height: 24px; stroke: var(--text); }
+
+    /* ========= LEGAL PAGE HEADER ========= */
+    .page-header { padding: 140px 24px 60px; background: linear-gradient(135deg, var(--cream) 0%, #FFF5EE 40%, #F0E8FF 100%); text-align: center; }
+    .page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 6vw, 52px); font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .page-header p { font-size: 16px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; }
+    .page-updated { font-size: 14px; color: var(--text-muted); margin-top: 12px; }
+
+    /* ========= CONTENT ========= */
+    .content { max-width: 900px; margin: 0 auto; padding: 60px 24px; }
+    .content h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin: 32px 0 16px; color: var(--navy); }
+    .content h3 { font-size: 20px; font-weight: 700; margin: 24px 0 12px; color: var(--navy); }
+    .content p { margin: 12px 0; font-size: 15px; line-height: 1.7; color: var(--text-secondary); }
+    .content ul, .content ol { margin: 16px 0 16px 24px; }
+    .content li { margin: 8px 0; font-size: 15px; line-height: 1.6; color: var(--text-secondary); }
+    .content strong { color: var(--text); font-weight: 600; }
+    .content a { color: var(--orange); font-weight: 500; }
+    .content a:hover { text-decoration: underline; }
+    .info-box { background: var(--light-bg); border-left: 4px solid var(--orange); padding: 20px; margin: 24px 0; border-radius: 8px; }
+    .info-box strong { display: block; margin-bottom: 8px; }
+    .toc { background: var(--cream); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 32px 0; }
+    .toc h3 { margin-top: 0; }
+    .toc ul { margin: 12px 0 0 24px; }
+    .toc li { margin: 6px 0; }
+    .toc a { color: var(--orange); font-weight: 500; }
+
+    /* ========= FOOTER ========= */
+    .footer { background: var(--navy); color: white; padding: 60px 24px 32px; margin-top: 60px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    .footer-brand h3 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .footer-brand h3 span { color: var(--orange); }
+    .footer-brand .tagline { color: var(--gold); font-weight: 600; font-size: 14px; margin-bottom: 12px; }
+    .footer-brand p { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+    .footer-col h4 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; color: rgba(255,255,255,0.9); }
+    .footer-col a { display: block; font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 10px; transition: color 0.2s; }
+    .footer-col a:hover { color: var(--orange); }
+    .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-bottom p { font-size: 13px; color: rgba(255,255,255,0.4); }
+    .footer-bottom a { color: var(--orange); }
+
+    /* ========= RESPONSIVE ========= */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-menu { display: block; }
+      .nav-links.active { display: flex; flex-direction: column; position: absolute; top: 68px; left: 0; right: 0; background: white; padding: 20px 24px; gap: 16px; box-shadow: 0 8px 24px var(--shadow); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .page-header { padding: 120px 24px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== NAVIGATION ==================== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">Snap<span>Claps</span></a>
+    <div class="nav-links" id="navLinks">
+      <span class="nav-handle">@oopsluxescapes</span>
+      <a href="/blog/">Blog</a>
+      <a href="/#deals">Deals</a>
+      <a href="/#destinations">Destinations</a>
+      <a href="/#guides">Travel Tips</a>
+      <a href="/#about">About</a>
+      <a href="/#contact">Contact</a>
+      <a href="https://www.tiktok.com/@oopsluxescapes" class="nav-cta" target="_blank">Follow Us</a>
+    </div>
+    <button class="mobile-menu" onclick="document.getElementById('navLinks').classList.toggle('active')">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ==================== PAGE HEADER ==================== -->
+<section class="page-header">
+  <h1>Privacy Policy</h1>
+  <p>How SnapClaps collects, uses, and protects your personal information.</p>
+  <p class="page-updated">Last updated: April 2026</p>
+</section>
+
+<!-- ==================== CONTENT ==================== -->
+<div class="content">
+
+  <div class="toc">
+    <h3>Quick Navigation</h3>
+    <ul>
+      <li><a href="#introduction">1. Introduction</a></li>
+      <li><a href="#information-we-collect">2. Information We Collect</a></li>
+      <li><a href="#how-we-use">3. How We Use Your Information</a></li>
+      <li><a href="#cookies">4. Cookies & Tracking Technologies</a></li>
+      <li><a href="#third-party">5. Third-Party Links & Affiliate Partners</a></li>
+      <li><a href="#analytics">6. Analytics & Data Processing</a></li>
+      <li><a href="#data-security">7. Data Security</a></li>
+      <li><a href="#your-rights">8. Your Privacy Rights (GDPR/CCPA)</a></li>
+      <li><a href="#contact">9. Contact Us</a></li>
+    </ul>
+  </div>
+
+  <h2 id="introduction">1. Introduction</h2>
+  <p>Welcome to SnapClaps (operated by <strong>Varshyl Inc</strong>), a travel deal curation platform under the brand <strong>OopsLuxEscapes</strong>. We are committed to protecting your privacy and ensuring you have a positive experience on our website (snapclaps.com) and social media channels.</p>
+  <p>This Privacy Policy explains what information we collect, how we use it, and your rights regarding your personal data. By using our website and services, you agree to the terms of this Privacy Policy.</p>
+
+  <h2 id="information-we-collect">2. Information We Collect</h2>
+
+  <h3>2.1 Information You Provide Directly</h3>
+  <p>When you interact with SnapClaps, we may collect:</p>
+  <ul>
+    <li><strong>Email Address:</strong> If you subscribe to our newsletter or contact us</li>
+    <li><strong>Contact Information:</strong> Name, phone number, or messages sent through our contact form</li>
+    <li><strong>Social Media Profiles:</strong> Your follower status or interactions on TikTok, Instagram, or other platforms</li>
+    <li><strong>Preferences:</strong> Travel interests, destination preferences, deal types you're interested in</li>
+  </ul>
+
+  <h3>2.2 Information Collected Automatically</h3>
+  <p>When you visit our website, we automatically collect:</p>
+  <ul>
+    <li><strong>Technical Data:</strong> IP address, browser type, operating system, device information</li>
+    <li><strong>Usage Data:</strong> Pages visited, time spent on each page, links clicked, referral source</li>
+    <li><strong>Location Data:</strong> Approximate geographic location (based on IP address, not GPS)</li>
+    <li><strong>Interaction Data:</strong> Scroll depth, button clicks, form submissions, video plays</li>
+  </ul>
+
+  <h3>2.3 Information from Third Parties</h3>
+  <p>We may receive information from:</p>
+  <ul>
+    <li><strong>Affiliate Networks:</strong> CJ Affiliates, Travelpayouts, Villiers Jets, ShareASale, Impact, Awin, Rakuten (conversion data, click tracking)</li>
+    <li><strong>Analytics Platforms:</strong> Google Analytics, Hotjar, or similar tools</li>
+    <li><strong>Social Media Platforms:</strong> TikTok, Instagram, YouTube (engagement metrics, follower counts)</li>
+  </ul>
+
+  <h2 id="how-we-use">3. How We Use Your Information</h2>
+
+  <p>We use your personal information for the following purposes:</p>
+
+  <h3>3.1 Service Delivery</h3>
+  <ul>
+    <li>Delivering travel deals and content to your email or social media feed</li>
+    <li>Responding to your inquiries and customer support requests</li>
+    <li>Managing your newsletter subscription preferences</li>
+    <li>Processing affiliate commission tracking and referrals</li>
+  </ul>
+
+  <h3>3.2 Improvement & Analytics</h3>
+  <ul>
+    <li>Analyzing user behavior to improve our website and content</li>
+    <li>Testing new features and optimizing the user experience</li>
+    <li>Understanding which deals resonate with our audience</li>
+    <li>Measuring campaign effectiveness and ROI</li>
+  </ul>
+
+  <h3>3.3 Marketing & Personalization</h3>
+  <ul>
+    <li>Sending promotional emails about new deals and travel tips (with your consent)</li>
+    <li>Creating personalized content recommendations</li>
+    <li>Segment audiences for targeted travel content</li>
+  </ul>
+
+  <h3>3.4 Legal & Compliance</h3>
+  <ul>
+    <li>Complying with applicable laws and regulations (GDPR, CCPA, FTC affiliate requirements)</li>
+    <li>Detecting and preventing fraud or abuse</li>
+    <li>Protecting the security and integrity of our platform</li>
+  </ul>
+
+  <h2 id="cookies">4. Cookies & Tracking Technologies</h2>
+
+  <p>We use cookies and similar tracking technologies to improve your experience:</p>
+
+  <h3>4.1 Types of Cookies We Use</h3>
+  <ul>
+    <li><strong>Essential Cookies:</strong> Required for website functionality and security</li>
+    <li><strong>Performance Cookies:</strong> Track usage patterns to optimize performance</li>
+    <li><strong>Tracking Cookies:</strong> Affiliate tracking cookies (to attribute commissions to deal sources)</li>
+    <li><strong>Marketing Cookies:</strong> Enable retargeting ads and social media integration</li>
+  </ul>
+
+  <h3>4.2 Third-Party Cookies</h3>
+  <p>Third-party platforms we work with may place their own cookies on your device:</p>
+  <ul>
+    <li><strong>Google Analytics:</strong> Tracks website traffic and user behavior</li>
+    <li><strong>Affiliate Networks:</strong> Track your clicks and bookings for commission attribution</li>
+    <li><strong>Social Media Platforms:</strong> Integrate TikTok, Instagram, and YouTube content</li>
+  </ul>
+
+  <h3>4.3 Cookie Consent & Opt-Out</h3>
+  <p>You can control cookies through your browser settings. Most browsers allow you to refuse cookies or alert you when cookies are being sent. Be aware that disabling certain cookies may limit website functionality. You can also opt out of Google Analytics tracking by installing the <strong>Google Analytics Opt-Out Browser Add-on</strong>.</p>
+
+  <h2 id="third-party">5. Third-Party Links & Affiliate Partners</h2>
+
+  <p><strong>Important:</strong> SnapClaps contains links to third-party websites (airline booking sites, hotel platforms, travel agencies, etc.). When you click these links and make a purchase, we may receive an affiliate commission at no extra cost to you.</p>
+
+  <h3>5.1 Our Affiliate Partners</h3>
+  <p>We are an affiliate partner with the following networks and brands:</p>
+  <ul>
+    <li><strong>CJ Affiliates</strong> — Flight and hotel bookings</li>
+    <li><strong>Travelpayouts</strong> — Multi-supplier travel booking platform</li>
+    <li><strong>Villiers Jets</strong> — Private jet charter and membership</li>
+    <li><strong>ShareASale</strong> — Merchant-specific affiliate programs</li>
+    <li><strong>Impact</strong> — Performance marketing partnerships</li>
+    <li><strong>Awin</strong> — Global affiliate marketing network</li>
+    <li><strong>Rakuten</strong> — Cashback and rewards partnerships</li>
+  </ul>
+
+  <h3>5.2 Affiliate Link Disclosure</h3>
+  <p>Affiliate links may be visually marked or clearly disclosed at the point of use. When you click an affiliate link, tracking cookies are placed on your device to attribute your booking to SnapClaps. This helps us earn a commission while helping you discover amazing deals.</p>
+
+  <h3>5.3 Third-Party Privacy Policies</h3>
+  <p>Our affiliate partners and linked websites have their own privacy policies. We are not responsible for their data practices. Please review their privacy policies before making a purchase or providing personal information.</p>
+
+  <h2 id="analytics">6. Analytics & Data Processing</h2>
+
+  <p>We use analytics tools to understand how users interact with our platform:</p>
+
+  <h3>6.1 Google Analytics</h3>
+  <p>We use Google Analytics to track website traffic, user behavior, and engagement. Google may place cookies on your device and process data about your visits. You can opt out at: https://tools.google.com/dlpage/gaoptout/</p>
+
+  <h3>6.2 Hotjar (Heatmaps & Session Recording)</h3>
+  <p>We may use Hotjar to record sessions and track user interactions. This helps us understand how users navigate our site. Hotjar may collect information about your device, location, and interaction patterns. You can opt out at: https://www.hotjar.com/privacy/</p>
+
+  <h3>6.3 Data Aggregation & Anonymization</h3>
+  <p>Most analytics data is aggregated and anonymized before analysis. We do not link personally identifiable information to analytics profiles unless you explicitly provide it (e.g., through a contact form).</p>
+
+  <h2 id="data-security">7. Data Security</h2>
+
+  <p>We take data security seriously and implement industry-standard measures to protect your information:</p>
+  <ul>
+    <li>HTTPS encryption for all website traffic</li>
+    <li>Secure storage of email lists and personal data</li>
+    <li>Regular security audits and vulnerability assessments</li>
+    <li>Limited access to personal data (only authorized team members)</li>
+    <li>Secure deletion of data when no longer needed</li>
+  </ul>
+
+  <div class="info-box">
+    <strong>Note on Security:</strong> While we implement robust security measures, no method of transmission over the internet is 100% secure. We cannot guarantee absolute security of your information.
+  </div>
+
+  <h2 id="your-rights">8. Your Privacy Rights</h2>
+
+  <h3>8.1 GDPR Rights (EU Residents)</h3>
+  <p>If you are located in the European Union, you have the following rights under the General Data Protection Regulation (GDPR):</p>
+  <ul>
+    <li><strong>Right of Access:</strong> Request a copy of your personal data</li>
+    <li><strong>Right to Rectification:</strong> Correct inaccurate personal data</li>
+    <li><strong>Right to Erasure:</strong> Request deletion of your data ("right to be forgotten")</li>
+    <li><strong>Right to Restrict Processing:</strong> Limit how we use your data</li>
+    <li><strong>Right to Data Portability:</strong> Receive your data in a portable format</li>
+    <li><strong>Right to Object:</strong> Opt out of marketing communications and data processing</li>
+    <li><strong>Right to Lodge a Complaint:</strong> File a complaint with your local data protection authority</li>
+  </ul>
+
+  <h3>8.2 CCPA Rights (California Residents)</h3>
+  <p>If you are a California resident, you have rights under the California Consumer Privacy Act (CCPA):</p>
+  <ul>
+    <li><strong>Right to Know:</strong> Request what personal information we collect about you</li>
+    <li><strong>Right to Delete:</strong> Request deletion of your personal information</li>
+    <li><strong>Right to Opt-Out of Sale/Sharing:</strong> Opt out of the sale or sharing of your personal information</li>
+    <li><strong>Right to Non-Discrimination:</strong> We will not discriminate against you for exercising your rights</li>
+  </ul>
+
+  <h3>8.3 How to Exercise Your Rights</h3>
+  <p>To request access to, correction of, or deletion of your personal data, contact us at <strong>hello@snapclaps.com</strong> with your request. We will respond within 30 days (or as required by applicable law). Please include:</p>
+  <ul>
+    <li>Your name and email address</li>
+    <li>The specific right you are requesting (access, deletion, correction, etc.)</li>
+    <li>Any relevant details about your interaction with us</li>
+  </ul>
+
+  <h2 id="contact">9. Contact Us</h2>
+
+  <p>If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:</p>
+
+  <div class="info-box">
+    <strong>SnapClaps — Privacy & Data Protection Team</strong><br>
+    Email: <a href="mailto:hello@snapclaps.com">hello@snapclaps.com</a><br>
+    Company: Varshyl Inc<br>
+    Website: snapclaps.com<br>
+    Social: @oopsluxescapes (TikTok, Instagram)
+  </div>
+
+  <h3>Data Protection Officer</h3>
+  <p>If you have concerns about our data practices or wish to file a complaint, you may also:</p>
+  <ul>
+    <li>Contact your local data protection authority (for GDPR complaints)</li>
+    <li>File a complaint with the California Attorney General (for CCPA complaints)</li>
+    <li>Reach out directly to our privacy team at hello@snapclaps.com</li>
+  </ul>
+
+  <h2>Privacy Policy Updates</h2>
+  <p>We may update this Privacy Policy from time to time to reflect changes in our practices, technology, or legal requirements. The "Last updated" date at the top of this page indicates the most recent revision. We will notify you of material changes via email or by posting the updated policy on our website.</p>
+
+  <p style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-muted);">This privacy policy is maintained by Varshyl Inc and applies to SnapClaps (OopsLuxEscapes). Your use of our website and services constitutes your acceptance of this policy.</p>
+
+</div>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h3>Snap<span>Claps</span></h3>
+        <div class="tagline">OopsLuxEscapes — Luxury Escapes at Oops Prices</div>
+        <p>We hunt down error fares, flash sales, and hidden luxury travel deals so you can see the world without emptying your wallet.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Site</h4>
+        <a href="/">Home</a>
+        <a href="/blog/">Blog</a>
+        <a href="/#deals">Deals</a>
+        <a href="/#destinations">Destinations</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="/blog/privacy-policy.html">Privacy Policy</a>
+        <a href="/blog/terms-of-service.html">Terms of Service</a>
+        <a href="/blog/affiliate-disclosure.html">Affiliate Disclosure</a>
+      </div>
+      <div class="footer-col">
+        <h4>Follow Us</h4>
+        <a href="https://www.tiktok.com/@oopsluxescapes" target="_blank">TikTok — @oopsluxescapes</a>
+        <a href="https://www.instagram.com/oopsluxescapes" target="_blank">Instagram — @oopsluxescapes</a>
+        <a href="mailto:hello@snapclaps.com">Email — hello@snapclaps.com</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 SnapClaps. All rights reserved. A <a href="https://varshyl.com" target="_blank">Varshyl Inc</a> brand.</p>
+      <p><a href="mailto:hello@snapclaps.com">hello@snapclaps.com</a> &nbsp;|&nbsp; <a href="/blog/privacy-policy.html">Privacy</a> &nbsp;|&nbsp; <a href="/blog/terms-of-service.html">Terms</a></p>
+    </div>
+  </div>
+</footer>
+
+<!-- Skimlinks — auto-converts outgoing links to affiliate links -->
+<!-- SKIMLINKS_SNIPPET_PLACEHOLDER — replace with actual snippet after publisher signup at skimlinks.com -->
+
+<!-- Email Subscribe CTA (bottom of article) -->
+<section style="background:linear-gradient(135deg,#1A2230 0%,#243042 100%);padding:60px 24px;text-align:center;margin-top:60px;">
+  <div style="max-width:560px;margin:0 auto;">
+    <p style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#E8622A;margin-bottom:12px;">📬 Deal Alerts</p>
+    <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:clamp(22px,4vw,32px);font-weight:700;color:#fff;margin-bottom:12px;">Get Deals Like This in Your Inbox</h2>
+    <p style="font-size:16px;color:rgba(255,255,255,0.7);margin-bottom:28px;line-height:1.6;">Free subscribers get daily deal alerts. Premium members get instant alerts — 30 minutes before we post publicly.</p>
+    <form action="https://buttondown.email/api/emails/embed-subscribe/oopsluxescapes" method="post" target="_blank" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+      <input type="email" name="email_address" placeholder="Your email address" required style="padding:14px 20px;border-radius:8px;border:none;font-size:15px;width:280px;max-width:100%;" />
+      <button type="submit" style="padding:14px 28px;background:#E8622A;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;">Get Free Alerts ✈️</button>
+    </form>
+    <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:16px;">Free forever. No spam. Unsubscribe anytime.</p>
+    <a href="https://snapclaps.com/#subscribe" style="display:inline-block;padding:10px 24px;background:rgba(255,255,255,0.08);color:#D4A853;border:1px solid rgba(212,168,83,0.4);border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">⚡ Go Premium for Instant Alerts ($9.99/mo) →</a>
+  </div>
+</section>
+
+<!-- Skimlinks auto-affiliate monetization -->
+<script type="text/javascript" src="https://s.skimresources.com/js/301475.skimlinks.js"></script>
+</body>
+</html>

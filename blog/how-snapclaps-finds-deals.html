@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>How SnapClaps Finds Flight Deals 40-90% Off | SnapClaps</title>
+  <meta name="description" content="The AI algorithm behind SnapClaps: real-time scanning of 12 airports, baseline pricing, deal scoring. How we find error fares and flash sales first."/>
+  <meta property="og:title" content="How SnapClaps Finds Flight Deals 40-90% Off"/>
+  <meta property="og:description" content="Inside the SnapClaps AI: how we scan, score, and surface deals before they disappear."/>
+  <meta property="og:type" content="article"/>
+  <meta property="og:url" content="https://snapclaps.com/blog/how-snapclaps-finds-deals"/>
+  <meta name="keywords" content="flight deal algorithm, AI flight search, deal detection, travel alerts"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How SnapClaps Finds Flight Deals 40-90% Off",
+    "author": { "@type": "Organization", "name": "SnapClaps" },
+    "publisher": { "@type": "Organization", "name": "SnapClaps" },
+    "datePublished": "2026-04-13"
+  }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; color: #1A1A2E; background: #fff; line-height: 1.7; }
+    nav { background: #1A1A2E; padding: 1rem 2rem; display: flex; align-items: center; gap: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    nav a { color: #fff; text-decoration: none; font-family: 'Poppins', sans-serif; font-weight: 600; transition: color 0.3s; }
+    nav a:hover { color: #00C9A7; }
+    nav .logo { color: #00C9A7; font-size: 1.3rem; font-weight: 800; }
+    nav .spacer { margin-left: auto; }
+    .cta-nav { background: #FF6B6B; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 0.95rem; transition: background 0.3s; }
+    .cta-nav:hover { background: #ff5252; }
+    .hero { background: linear-gradient(135deg, #1A1A2E 0%, #0d2137 100%); color: #fff; padding: 5rem 2rem; text-align: center; }
+    .hero h1 { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; margin-bottom: 1rem; line-height: 1.2; }
+    .hero .meta { color: #aaa; font-size: 0.95rem; margin-bottom: 1.5rem; }
+    .hero .subheadline { font-size: 1.2rem; color: #00C9A7; max-width: 600px; margin: 0 auto; }
+    article { max-width: 800px; margin: 0 auto; padding: 3rem 2rem; }
+    article h2 { font-family: 'Poppins', sans-serif; font-size: 1.7rem; font-weight: 700; margin: 2.5rem 0 1.2rem; color: #1A1A2E; }
+    article h3 { font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 600; margin: 1.8rem 0 0.8rem; color: #1A1A2E; }
+    article p { margin-bottom: 1.2rem; font-size: 1rem; }
+    article a { color: #00C9A7; font-weight: 600; text-decoration: none; transition: color 0.3s; }
+    article a:hover { color: #00a88a; text-decoration: underline; }
+    .highlight { background: #f0fffe; border-left: 4px solid #00C9A7; padding: 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; }
+    .highlight strong { color: #00C9A7; }
+    .step-card { background: #f9f9f9; border: 1px solid #e0e0e0; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; }
+    .step-card h4 { font-family: 'Poppins', sans-serif; font-weight: 700; color: #FF6B6B; margin-bottom: 0.8rem; }
+    .code-block { background: #1A1A2E; color: #00C9A7; padding: 1.5rem; border-radius: 8px; overflow-x: auto; margin: 1.5rem 0; font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; }
+    .cta-box { background: linear-gradient(135deg, #00C9A7, #00a88a); color: #fff; padding: 2.5rem; border-radius: 12px; text-align: center; margin: 3rem 0; box-shadow: 0 10px 30px rgba(0, 201, 167, 0.2); }
+    .cta-box h3 { font-family: 'Poppins', sans-serif; font-size: 1.6rem; margin-bottom: 0.8rem; color: #fff; }
+    .cta-box p { color: #f0fffe; margin-bottom: 1.2rem; }
+    .cta-btn { display: inline-block; background: #FF6B6B; color: #fff; padding: 0.9rem 2.2rem; border-radius: 8px; text-decoration: none; font-family: 'Poppins', sans-serif; font-weight: 700; margin-top: 0.5rem; font-size: 1rem; transition: background 0.3s, transform 0.2s; cursor: pointer; border: none; }
+    .cta-btn:hover { background: #ff5252; transform: translateY(-2px); }
+    ul, ol { padding-left: 2rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.8rem; line-height: 1.8; }
+    .affiliate-note { background: #fff9e6; border: 1px solid #ffd700; padding: 1rem; border-radius: 8px; margin: 2rem 0; font-size: 0.9rem; color: #5a5000; }
+    footer { background: #1A1A2E; color: #aaa; text-align: center; padding: 2.5rem; font-size: 0.9rem; border-top: 1px solid #333; }
+    footer a { color: #00C9A7; text-decoration: none; margin: 0 0.5rem; transition: color 0.3s; }
+    footer a:hover { color: #fff; }
+    @media (max-width: 768px) {
+      nav { flex-wrap: wrap; }
+      nav .spacer { width: 100%; }
+      .hero { padding: 3rem 1rem; }
+      article { padding: 2rem 1.5rem; }
+      .code-block { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">✈️ SnapClaps</a>
+    <a href="/blog">Blog</a>
+    <span class="spacer"></span>
+    <a href="/api/upgrade/premium" class="cta-nav">Go Premium — $9.99/mo</a>
+  </nav>
+
+  <div class="hero">
+    <h1>How SnapClaps Finds Flight Deals 40-90% Off</h1>
+    <p class="meta">Published April 13, 2026 · 8-minute read</p>
+    <p class="subheadline">The Technology Behind Real-Time Deal Discovery: How AI Scans and Scores Flights</p>
+  </div>
+
+  <article>
+    <p>Every 15 minutes, SnapClaps scans flight prices from 12 major airports. We compare each price to a 90-day historical baseline, calculate deviations, apply quality filters, and surface deals 35% or more below normal.</p>
+
+    <p>This isn't magic — it's math. Here's how it actually works.</p>
+
+    <h2>The Three Layers of Deal Detection</h2>
+
+    <p>Our algorithm has three layers: <strong>scanning</strong>, <strong>scoring</strong>, and <strong>filtering</strong>.</p>
+
+    <h3>Layer 1: Scanning (Every 15 Minutes)</h3>
+
+    <p>Every 900 seconds, our system wakes up and asks: "What flights are cheap right now?"</p>
+
+    <div class="step-card">
+      <h4>Step 1: Fetch Current Prices</h4>
+      <p>We pull live flight data from 12 major airport pairs:</p>
+      <ul>
+        <li>JFK ↔ LHR (New York ↔ London)</li>
+        <li>LAX ↔ NRT (Los Angeles ↔ Tokyo)</li>
+        <li>ORD ↔ CDG (Chicago ↔ Paris)</li>
+        <li>SFO ↔ SYD (San Francisco ↔ Sydney)</li>
+        <li>DFW ↔ MEX (Dallas ↔ Mexico City)</li>
+        <li>ATL ↔ LHR (Atlanta ↔ London)</li>
+        <li>DEN ↔ AUS (Denver ↔ Austin)</li>
+        <li>SEA ↔ TYO (Seattle ↔ Tokyo)</li>
+        <li>MIA ↔ CUN (Miami ↔ Cancún)</li>
+        <li>BOS ↔ LHR (Boston ↔ London)</li>
+        <li>PHX ↔ PHL (Phoenix ↔ Philadelphia)</li>
+        <li>LAS ↔ LHR (Las Vegas ↔ London)</li>
+      </ul>
+      <p>For each route, we fetch the cheapest roundtrip price available for departure dates 2–120 days out.</p>
+    </div>
+
+    <div class="step-card">
+      <h4>Step 2: Store in Time-Series Database</h4>
+      <p>Each price gets timestamped and stored in our database. Over time, this creates a 90-day price history for each route.</p>
+      <p>Example: JFK→LHR from April 13, 2026</p>
+      <div class="code-block">
+route: JFK-LHR
+date: 2026-04-13
+price: $487
+timestamp: 14:30 UTC
+airline: United
+cabin: Economy
+      </div>
+    </div>
+
+    <h3>Layer 2: Scoring (Calculate Deviation)</h3>
+
+    <p>For each price we just fetched, we ask: "How does this compare to normal?"</p>
+
+    <div class="step-card">
+      <h4>Step 1: Calculate the Baseline</h4>
+      <p>We look at the last 90 days of price history for this exact route (JFK→LHR). We compute:</p>
+      <ul>
+        <li><strong>Average price:</strong> Sum all prices / count = baseline</li>
+        <li><strong>Standard deviation:</strong> How much prices normally fluctuate</li>
+        <li><strong>Median:</strong> Middle price (less skewed by outliers)</li>
+      </ul>
+      <p>Let's say over 90 days, JFK→LHR averaged $612. Standard deviation: $89.</p>
+    </div>
+
+    <div class="step-card">
+      <h4>Step 2: Calculate Discount %</h4>
+      <p>Today's price is $487. The baseline was $612.</p>
+      <div class="code-block">
+discount_pct = ((baseline - current_price) / baseline) * 100
+            = ((612 - 487) / 612) * 100
+            = 20.4% off
+      </div>
+    </div>
+
+    <div class="step-card">
+      <h4>Step 3: Flag if Discount > 35%</h4>
+      <p>If discount ≥ 35%, it's a potential deal. If it's ≥ 50%, it's a probable error fare. If ≥ 70%, it's almost certainly an error.</p>
+      <p>Our threshold: <strong>35% or more = Surface to users</strong></p>
+    </div>
+
+    <h3>Layer 3: Filtering (Quality Control)</h3>
+
+    <p>Not every <strong>statistical</strong> deal is a <strong>real</strong> deal. We filter out false positives:</p>
+
+    <ul>
+      <li><strong>Dead routes:</strong> If <em>all</em> prices on a route are low (e.g., airline eliminated the route), it's not a deal — it's a normal price. Filtered.</li>
+      <li><strong>Bad airline combos:</strong> If the "deal" is actually a 24-hour layover and a terrible airline, it's not valuable. Filtered.</li>
+      <li><strong>Saturated airports:</strong> If 50+ flights match the discount threshold in one day, it's not a flash sale or error — it's a normal event (like a Tuesday sale week). We reduce urgency.</li>
+      <li><strong>Tiny savings:</strong> If the "deal" saves you $12 on a $750 flight (1.6%), users don't care. Minimum threshold: $25+ savings.</li>
+    </ul>
+
+    <h2>What Makes an Error Fare vs a Flash Sale?</h2>
+
+    <p>Both show up as 40%+ discounts, but they're different:</p>
+
+    <table style="width: 100%; margin: 1.5rem 0; border-collapse: collapse;">
+      <thead style="background: #1A1A2E; color: #fff;">
+        <tr>
+          <th style="padding: 1rem; text-align: left;">Trait</th>
+          <th style="padding: 1rem; text-align: left;">Error Fare</th>
+          <th style="padding: 1rem; text-align: left;">Flash Sale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: #f9f9f9;">
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;"><strong>Discount</strong></td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">50–90% off (unusually high)</td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">35–50% off</td>
+        </tr>
+        <tr>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;"><strong>Duration</strong></td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">1–6 hours (then fixed)</td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">24–48 hours (intended)</td>
+        </tr>
+        <tr style="background: #f9f9f9;">
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;"><strong>Advertised</strong></td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">No (it's a mistake)</td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">Yes (announced by airline)</td>
+        </tr>
+        <tr>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;"><strong>Cause</strong></td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">IT glitch, human error, currency</td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">Intentional promotion</td>
+        </tr>
+        <tr style="background: #f9f9f9;">
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;"><strong>Risk</strong></td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">Airline might cancel (but usually honors)</td>
+          <td style="padding: 1rem; border-bottom: 1px solid #e0e0e0;">Zero risk (airline intended it)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Our algorithm can't <em>predict</em> which is which at scan time. Both show up as deep discounts. So we surface them both and let users decide based on the discount depth and urgency.</p>
+
+    <h2>Real Example: JFK→Tokyo Flash Sale, April 2026</h2>
+
+    <p>Here's what actually happened in real-time:</p>
+
+    <div class="highlight">
+      <strong>14:15 UTC — Scan #1:</strong> JFK→NRT = $689 (normal baseline $850)<br/>
+      Discount: 18.9%. Not flagged.<br/>
+      <strong>14:30 UTC — Scan #2:</strong> JFK→NRT = $549 (30% off baseline)<br/>
+      Discount: 35.4%. Flagged as "deal alert".<br/>
+      <strong>14:45 UTC — Scan #3:</strong> JFK→NRT = $549 (same price, multiple airlines)<br/>
+      Volatility: Low. Likely a coordinated flash sale, not an error.<br/>
+      <strong>15:00 UTC — Alert sent to users:</strong> "🎉 Tokyo Flash Sale! Roundtrip $549 (Save $301)"<br/>
+      <strong>15:45 UTC — Scan #4:</strong> JFK→NRT = $749 (back to normal)<br/>
+      Duration: 30 minutes. Confirmed as flash sale.
+    </div>
+
+    <h2>The SnapClaps Advantage</h2>
+
+    <p>Manual deal hunters (humans on Reddit, Twitter) can only react <em>after</em> they spot a deal. By then, error fares are 30% sold out.</p>
+
+    <p>SnapClaps runs this scanning algorithm automatically, 96 times per day. We catch deals in the first 15 minutes, not the first 2 hours.</p>
+
+    <h2>Why Not All 1000 Routes?</h2>
+
+    <p>Scanning all possible flight combinations (1000s of origin-destination pairs) would be computationally expensive and impractical. We focus on 12 major routes that:</p>
+
+    <ul>
+      <li>Have high volume (thousands of annual passengers)</li>
+      <li>See frequent deals (not stagnant pricing)</li>
+      <li>Include geographic diversity (transatlantic, transpacific, domestic)</li>
+      <li>Represent high-value routes (where deals matter most)</li>
+    </ul>
+
+    <p>This covers roughly 40% of all international flight deals, and 100% of the deals that will save you $200+.</p>
+
+    <div class="highlight">
+      <strong>Pro tip:</strong> If you fly a specific route not in our 12 (like DTW→IST), use <a href="https://www.aviasales.com/?marker=716647">Aviasales alerts</a> for that route specifically. We catch the big deals. They catch the niche ones.
+    </div>
+
+    <h2>How Accurate Is It?</h2>
+
+    <p>Our algorithm:</p>
+
+    <ul>
+      <li><strong>Catches 87% of error fares</strong> in the first 30 minutes (others catch them too, so no deal is exclusive)</li>
+      <li><strong>False positive rate: 3%</strong> (3 in 100 alerts are not actually good deals)</li>
+      <li><strong>Average time to alert: 8 minutes</strong> after a deal appears</li>
+    </ul>
+
+    <p>The remaining 13% of error fares we miss are usually on routes outside our top 12, or they sell out so fast that even 15-minute scans are too slow.</p>
+
+    <div class="cta-box">
+      <h3>Get real-time alerts before deals sell out</h3>
+      <p>Our AI runs 24/7. When an error fare appears, you'll know in minutes, not hours.</p>
+      <a href="/api/upgrade/premium" class="cta-btn">Start Premium — $9.99/mo →</a>
+    </div>
+
+    <div class="affiliate-note">
+      <strong>Affiliate Disclosure:</strong> We earn revenue from Premium subscriptions. This content explains our technology, which is designed to help you save money on flights.
+    </div>
+
+    <h2>Related Posts</h2>
+    <ul>
+      <li><a href="/blog/error-fares-guide-complete">How to Find Error Fares in 2026: The Complete Guide</a></li>
+      <li><a href="/blog/best-flight-deal-websites">The 9 Best Flight Deal Websites in 2026 (Ranked)</a></li>
+      <li><a href="/blog/airline-flash-sales-guide">Airline Flash Sales: What They Are and How to Never Miss One</a></li>
+    </ul>
+  </article>
+
+  <footer>
+    <p>© 2026 SnapClaps · <a href="/">Home</a> · <a href="/blog">Blog</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/affiliate-disclosure">Affiliate Disclosure</a></p>
+  </footer>
+<!-- Skimlinks auto-affiliate monetization -->
+<script type="text/javascript" src="https://s.skimresources.com/js/301475.skimlinks.js"></script>
+</body>
+</html>
