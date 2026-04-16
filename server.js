@@ -1,15 +1,84 @@
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// --- JWT Config ---
+const JWT_SECRET = process.env.JWT_SECRET || 'snapclaps-jwt-secret-change-in-prod';
 
 // --- Database ---
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
+
+// --- Database initialization: create tables on startup ---
+async function initializeDatabase() {
+  try {
+    await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        name VARCHAR(255),
+        tier VARCHAR(20) DEFAULT 'free' CHECK (tier IN ('free','premium','elite')),
+        stripe_customer_id VARCHAR(255),
+        home_airport VARCHAR(10),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_cards (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        issuer VARCHAR(50) NOT NULL,
+        card_name VARCHAR(100) NOT NULL,
+        points_balance INTEGER DEFAULT 0,
+        currency VARCHAR(50) DEFAULT 'points',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(500) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Run migrations for existing tables
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255)");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS tier VARCHAR(20) DEFAULT 'free'");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS home_airport VARCHAR(10)");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()");
+    await pool.query("ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()");
+    await pool.query("ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS currency VARCHAR(50) DEFAULT 'points'");
+    await pool.query("ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS points_balance INTEGER DEFAULT 0");
+    await pool.query("ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS card_name VARCHAR(100)");
+    await pool.query("ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS issuer VARCHAR(50)");
+    await pool.query("ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS user_id UUID");
+    await pool.query("ALTER TABLE user_cards ALTER COLUMN points_program DROP NOT NULL").catch(() => {});
+    await pool.query("ALTER TABLE user_cards ALTER COLUMN user_id DROP NOT NULL").catch(() => {});
+    console.log('Migrations applied');
+    console.log('Database tables initialized');
+  } catch (err) {
+    console.error('Database initialization error:', err.message);
+  }
+}
+
+initializeDatabase();
 
 // --- Middleware ---
 app.use(express.json());
@@ -19,11 +88,49 @@ app.use((req, res, next) => {
   if (!origin || allowed.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
+
+// --- Auth Helper Functions ---
+function generateToken(userId) {
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+async function authMiddleware(req, res, next) {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Authentication required' });
+    const { userId } = jwt.verify(token, JWT_SECRET);
+    const result = await pool.query(
+      'SELECT id, email, name, tier, home_airport FROM users WHERE id = $1',
+      [userId]
+    );
+    if (!result.rows[0]) return res.status(401).json({ error: 'User not found' });
+    req.user = result.rows[0];
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+function optionalAuth(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return next();
+  try {
+    const { userId } = jwt.verify(token, JWT_SECRET);
+    pool.query('SELECT id, email, name, tier FROM users WHERE id = $1', [userId])
+      .then(r => {
+        if (r.rows[0]) req.user = r.rows[0];
+        next();
+      })
+      .catch(() => next());
+  } catch {
+    next();
+  }
+}
 
 // --- Static files: React app ---
 const fs = require('fs');
@@ -98,11 +205,17 @@ app.get('/api/geo', async (req, res) => {
 });
 
 // --- API: Deals ---
-app.get('/api/deals', async (req, res) => {
+app.get('/api/deals', optionalAuth, async (req, res) => {
   try {
     const { origin, limit = 50, type } = req.query;
     let query = 'SELECT * FROM deals WHERE is_active = true';
     const params = [];
+
+    // Free tier users see only deals from 2+ hours ago
+    if (!req.user || req.user.tier === 'free') {
+      query += ` AND created_at < NOW() - INTERVAL '2 hours'`;
+    }
+
     if (origin) {
       params.push(origin.toUpperCase());
       query += ` AND (origin_airport = $${params.length} OR origin_airport IS NULL)`;
@@ -289,6 +402,253 @@ app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'robots.txt'));
 });
 
+// --- API: Auth Routes ---
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Email, password, and name are required' });
+    }
+
+    if (typeof email !== 'string' || typeof password !== 'string' || typeof name !== 'string') {
+      return res.status(400).json({ error: 'Invalid input types' });
+    }
+
+    const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (email, password_hash, name, tier, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING id, email, name, tier, home_airport',
+      [email.toLowerCase(), passwordHash, name, 'free']
+    );
+
+    const user = result.rows[0];
+    const token = generateToken(user.id);
+
+    res.status(201).json({
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          tier: user.tier,
+          homeAirport: user.home_airport,
+        }
+      }
+    });
+  } catch (err) {
+    console.error('register error:', err.message);
+    res.status(500).json({ error: 'Registration failed', detail: err.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Invalid input types' });
+    }
+
+    const result = await pool.query('SELECT id, email, name, tier, home_airport, password_hash FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const user = result.rows[0];
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const token = generateToken(user.id);
+
+    res.json({
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          tier: user.tier,
+          homeAirport: user.home_airport,
+        }
+      }
+    });
+  } catch (err) {
+    console.error('login error:', err.message);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const cardsResult = await pool.query('SELECT id, issuer, card_name, points_balance, currency FROM user_cards WHERE user_id = $1 LIMIT 20', [req.user.id]);
+
+    res.json({
+      data: {
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          tier: req.user.tier,
+          homeAirport: req.user.home_airport,
+        },
+        cards: cardsResult.rows.map(c => ({
+          id: c.id,
+          issuer: c.issuer,
+          cardName: c.card_name,
+          pointsBalance: c.points_balance,
+          currency: c.currency,
+          createdAt: c.created_at,
+        }))
+      }
+    });
+  } catch (err) {
+    console.error('auth/me error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch user data', detail: err.message });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ data: { success: true, message: 'Logged out' } });
+});
+
+// --- API: Points Wallet Routes ---
+const TRANSFER_PARTNERS = {
+  'chase_sapphire': { airlines: ['United', 'Southwest', 'British Airways', 'Air France/KLM', 'Virgin Atlantic', 'Singapore Airlines', 'Aeroplan', 'Emirates'], hotels: ['Hyatt', 'IHG'] },
+  'chase_sapphire_reserve': { airlines: ['United', 'Southwest', 'British Airways', 'Air France/KLM', 'Virgin Atlantic', 'Singapore Airlines', 'Aeroplan', 'Emirates'], hotels: ['Hyatt', 'IHG'] },
+  'amex_platinum': { airlines: ['Delta', 'British Airways', 'Air France/KLM', 'ANA', 'Virgin Atlantic', 'Avianca LifeMiles', 'Singapore Airlines', 'Aeroplan', 'Cathay Pacific', 'Etihad'], hotels: ['Hilton', 'Marriott'] },
+  'amex_gold': { airlines: ['Delta', 'British Airways', 'Air France/KLM', 'ANA', 'Virgin Atlantic', 'Avianca LifeMiles', 'Singapore Airlines', 'Aeroplan'], hotels: ['Hilton', 'Marriott'] },
+  'capital_one_venture_x': { airlines: ['Air Canada Aeroplan', 'British Airways', 'Air France/KLM', 'Turkish', 'Avianca', 'Singapore Airlines', 'Cathay Pacific'], hotels: ['Wyndham'] },
+  'citi_strata': { airlines: ['Air France/KLM', 'Singapore Airlines', 'Turkish', 'Avianca LifeMiles', 'Virgin Atlantic', 'Qatar', 'Cathay Pacific', 'Emirates'], hotels: ['Accor', 'Wyndham'] },
+  'bilt': { airlines: ['American', 'United', 'Air Canada', 'Turkish', 'Virgin Atlantic', 'Air France/KLM'], hotels: ['Hyatt', 'IHG', 'Marriott', 'Hilton'] },
+};
+
+app.get('/api/wallet', authMiddleware, async (req, res) => {
+  try {
+    const cardsResult = await pool.query(
+      'SELECT id, issuer, card_name, points_balance, currency FROM user_cards WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.user.id]
+    );
+
+    const cards = cardsResult.rows.map(c => ({
+      id: c.id,
+      issuer: c.issuer,
+      cardName: c.card_name,
+      pointsBalance: c.points_balance,
+      currency: c.currency,
+      transferPartners: TRANSFER_PARTNERS[c.issuer] || { airlines: [], hotels: [] },
+    }));
+
+    res.json({ data: { cards } });
+  } catch (err) {
+    console.error('wallet error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch wallet' });
+  }
+});
+
+app.post('/api/wallet/cards', authMiddleware, async (req, res) => {
+  try {
+    const { issuer, cardName, pointsBalance } = req.body;
+
+    if (!issuer || !cardName) {
+      return res.status(400).json({ error: 'Issuer and card name are required' });
+    }
+
+    if (typeof issuer !== 'string' || typeof cardName !== 'string') {
+      return res.status(400).json({ error: 'Invalid input types' });
+    }
+
+    const balance = parseInt(pointsBalance) || 0;
+
+    const result = await pool.query(
+      'INSERT INTO user_cards (user_id, issuer, card_name, points_balance, currency, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id, issuer, card_name, points_balance, currency',
+      [req.user.id, issuer, cardName, balance, 'points']
+    );
+
+    const card = result.rows[0];
+
+    res.status(201).json({
+      data: {
+        id: card.id,
+        issuer: card.issuer,
+        cardName: card.card_name,
+        pointsBalance: card.points_balance,
+        currency: card.currency,
+        transferPartners: TRANSFER_PARTNERS[card.issuer] || { airlines: [], hotels: [] },
+      }
+    });
+  } catch (err) {
+    console.error('wallet/cards POST error:', err.message);
+    res.status(500).json({ error: 'Failed to add card' });
+  }
+});
+
+app.put('/api/wallet/cards/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pointsBalance } = req.body;
+
+    if (typeof pointsBalance !== 'number') {
+      return res.status(400).json({ error: 'Points balance must be a number' });
+    }
+
+    const cardCheck = await pool.query('SELECT user_id FROM user_cards WHERE id = $1', [id]);
+    if (cardCheck.rows.length === 0 || cardCheck.rows[0].user_id !== req.user.id) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    const result = await pool.query(
+      'UPDATE user_cards SET points_balance = $1 WHERE id = $2 RETURNING id, issuer, card_name, points_balance, currency',
+      [pointsBalance, id]
+    );
+
+    const card = result.rows[0];
+
+    res.json({
+      data: {
+        id: card.id,
+        issuer: card.issuer,
+        cardName: card.card_name,
+        pointsBalance: card.points_balance,
+        currency: card.currency,
+        transferPartners: TRANSFER_PARTNERS[card.issuer] || { airlines: [], hotels: [] },
+      }
+    });
+  } catch (err) {
+    console.error('wallet/cards PUT error:', err.message);
+    res.status(500).json({ error: 'Failed to update card' });
+  }
+});
+
+app.delete('/api/wallet/cards/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const cardCheck = await pool.query('SELECT user_id FROM user_cards WHERE id = $1', [id]);
+    if (cardCheck.rows.length === 0 || cardCheck.rows[0].user_id !== req.user.id) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    await pool.query('DELETE FROM user_cards WHERE id = $1', [id]);
+
+    res.json({ data: { success: true, message: 'Card removed' } });
+  } catch (err) {
+    console.error('wallet/cards DELETE error:', err.message);
+    res.status(500).json({ error: 'Failed to delete card' });
+  }
+});
+
 // --- Deal fetch cron (every 15 min) ---
 const AIRPORTS = ['JFK','LAX','ORD','DFW','ATL','SFO','SEA','MIA','BOS','DEN','PHX','LAS'];
 const TRAVELPAYOUTS_TOKEN = process.env.TRAVELPAYOUTS_TOKEN;
@@ -345,6 +705,32 @@ async function refreshDeals() {
 // Run on start + every 15 min
 refreshDeals();
 setInterval(refreshDeals, 15 * 60 * 1000);
+
+
+// --- Wallet: Bulk setup (onboarding) ---
+app.post('/api/wallet/setup', authMiddleware, async (req, res) => {
+  try {
+    const { homeAirport, cards } = req.body;
+    if (!cards || !Array.isArray(cards)) return res.status(400).json({ error: 'cards array required' });
+    // Update home airport
+    if (homeAirport && typeof homeAirport === 'string') {
+      await pool.query('UPDATE users SET home_airport = $1 WHERE id = $2', [homeAirport.toUpperCase().slice(0,10), req.user.id]);
+    }
+    // Delete existing cards and re-insert
+    await pool.query('DELETE FROM user_cards WHERE user_id = $1', [req.user.id]);
+    for (const card of cards.slice(0, 10)) {
+      if (!card.issuer || !card.cardName) continue;
+      await pool.query(
+        'INSERT INTO user_cards (user_id, issuer, card_name, points_balance) VALUES ($1::uuid, $2, $3, $4)',
+        [req.user.id, String(card.issuer).slice(0,50), String(card.cardName).slice(0,100), parseInt(card.pointsBalance) || 0]
+      );
+    }
+    res.json({ data: { success: true, message: 'Wallet setup complete' } });
+  } catch (err) {
+    console.error('wallet/setup error:', err.message);
+    res.status(500).json({ error: 'Failed to setup wallet', detail: err.message });
+  }
+});
 
 // --- SPA fallback — serve React app ---
 app.get('*', (req, res) => {
