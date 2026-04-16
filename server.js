@@ -72,6 +72,16 @@ async function initializeDatabase() {
     await pool.query("ALTER TABLE user_cards ALTER COLUMN points_program DROP NOT NULL").catch(() => {});
     await pool.query("ALTER TABLE user_cards ALTER COLUMN user_id DROP NOT NULL").catch(() => {});
     console.log('Migrations applied');
+    // Add columns that may not exist from original schema
+    const alterCmds = [
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS departure_date DATE",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS return_date DATE",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS airline VARCHAR(100)",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS origin VARCHAR(10)",
+    ];
+    for (const cmd of alterCmds) {
+      await pool.query(cmd).catch(() => {});
+    }
     console.log('Database tables initialized');
   } catch (err) {
     console.error('Database initialization error:', err.message);
@@ -654,38 +664,108 @@ const AIRPORTS = ['JFK','LAX','ORD','DFW','ATL','SFO','SEA','MIA','BOS','DEN','P
 const TRAVELPAYOUTS_TOKEN = process.env.TRAVELPAYOUTS_TOKEN;
 const MARKER = process.env.TRAVELPAYOUTS_MARKER || '515443';
 
+// Airport code to city name lookup
+const AIRPORT_CITIES = {
+  SFO:'San Francisco',LAX:'Los Angeles',JFK:'New York',ORD:'Chicago',MIA:'Miami',
+  ATL:'Atlanta',DFW:'Dallas',SEA:'Seattle',BOS:'Boston',DEN:'Denver',SJC:'San Jose',
+  OAK:'Oakland',PHX:'Phoenix',LAS:'Las Vegas',MSP:'Minneapolis',DTW:'Detroit',
+  NRT:'Tokyo',HND:'Tokyo',CDG:'Paris',LHR:'London',FCO:'Rome',BCN:'Barcelona',
+  AMS:'Amsterdam',FRA:'Frankfurt',MXP:'Milan',MAD:'Madrid',ZRH:'Zurich',VIE:'Vienna',
+  CUN:'Cancun',DPS:'Bali',HNL:'Honolulu',ICN:'Seoul',BKK:'Bangkok',SIN:'Singapore',
+  DXB:'Dubai',MLE:'Maldives',SYD:'Sydney',MEL:'Melbourne',NAN:'Fiji',PVR:'Puerto Vallarta',
+  SJU:'San Juan',MSY:'New Orleans',TYO:'Tokyo',GRU:'São Paulo',EZE:'Buenos Aires',
+  SCL:'Santiago',BOG:'Bogota',LIM:'Lima',GIG:'Rio de Janeiro',
+};
+
+function buildAviasalesUrl(origin, dest, departureAt, returnAt) {
+  // Correct Aviasales format: /search/{origin}{DDMM}{destination}{DDMM}?marker=716647
+  // e.g. SFO1506NRT2106?marker=716647
+  const marker = '716647';
+  if (!departureAt) {
+    return `https://www.aviasales.com/?marker=${marker}&origin=${origin}&destination=${dest}`;
+  }
+  const dep = new Date(departureAt);
+  const dd = String(dep.getUTCDate()).padStart(2,'0');
+  const mm = String(dep.getUTCMonth()+1).padStart(2,'0');
+  const depPart = `${dd}${mm}`;
+  
+  if (returnAt) {
+    const ret = new Date(returnAt);
+    const rdd = String(ret.getUTCDate()).padStart(2,'0');
+    const rmm = String(ret.getUTCMonth()+1).padStart(2,'0');
+    return `https://www.aviasales.com/search/${origin}${depPart}${dest}${rdd}${rmm}?marker=${marker}`;
+  }
+  // One-way
+  return `https://www.aviasales.com/search/${origin}${depPart}${dest}1?marker=${marker}`;
+}
+
 async function fetchAndStoreDeal(origin) {
   try {
-    const res = await fetch(`https://api.travelpayouts.com/v1/prices/cheap?origin=${origin}&currency=usd&token=${TRAVELPAYOUTS_TOKEN}`);
-    if (!res.ok) return;
-    const json = await res.json();
-    const deals = json.data || {};
-    for (const [dest, info] of Object.entries(deals)) {
-      if (!info || !info.price) continue;
-      const price = info.price;
-      const normalPrice = Math.round(price * 2.5);
-      const savingsPct = 60;
-      const id = `tp-flight-${origin}-${dest}`;
-      const isError = price < 150 || savingsPct >= 70;
-      const searchUrl = `https://snapclaps.com/api/search?origin=${origin}&dest=${dest}&deal_id=${id}`;
-      await pool.query(`
-        INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, expires_at, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, created_at, updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW(),NOW())
-        ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, affiliate_url=$12, urgency_type=$14, expires_at=$15, viral_score=$16, is_error_fare=$17, is_active=$20, badge=$21, updated_at=NOW()
-      `, [
-        id, 'flight',
-        isError ? `🚨 ${dest.charAt(0)+dest.slice(1).toLowerCase()} from $${price}` : `✈️ ${dest.charAt(0)+dest.slice(1).toLowerCase()} from $${price}`,
-        `Roundtrip from ${origin} — ${isError ? 'ERROR FARE! Book now' : 'limited availability'}`,
-        price, normalPrice, savingsPct, 'USD',
-        dest, dest, origin,
-        searchUrl, 'kiwi',
-        isError ? 'timer' : 'evergreen',
-        isError ? new Date(Date.now() + 12 * 3600 * 1000).toISOString() : null,
-        isError ? 9 : 7,
-        isError, false, 'travelpayouts_api', true,
-        isError ? 'HOT' : 'DEAL', false, true
-      ]);
+    if (!TRAVELPAYOUTS_TOKEN) {
+      console.log(`Skip fetchDeal ${origin}: TRAVELPAYOUTS_TOKEN not set`);
+      return;
     }
+    // Use prices_for_dates which returns actual price field + link
+    const months = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
+    const allDeals = [];
+    for (const month of months.slice(0, 2)) { // fetch 2 months to stay within rate limits
+      const res = await fetch(
+        `https://api.travelpayouts.com/aviasales/v3/prices_for_dates?token=${TRAVELPAYOUTS_TOKEN}&origin=${origin}&departure_at=${month}&currency=usd&sorting=price&limit=10&market=us`
+      );
+      if (!res.ok) continue;
+      const json = await res.json();
+      if (json.data) allDeals.push(...json.data);
+      await new Promise(r => setTimeout(r, 200)); // avoid rate limit
+    }
+    
+    for (const deal of allDeals) {
+      // prices_for_dates fields: origin_airport, destination_airport, price, airline, departure_at, link
+      const dest = deal.destination_airport || deal.destination;
+      const price = deal.price;
+      if (!dest || !price || price <= 0) continue;
+      
+      const id = `tp-flight-${origin}-${dest}`;
+      const normalPrice = Math.round(price * 2.2);
+      const savingsPct = Math.round(((normalPrice - price) / normalPrice) * 100);
+      const isError = price < 150 || savingsPct >= 70;
+      
+      const originCity = AIRPORT_CITIES[origin] || origin;
+      const destCity = AIRPORT_CITIES[dest] || dest;
+      
+      // Use the link field from API which already has the correct Aviasales path
+      // Just add our affiliate marker=716647
+      const affiliateUrl = deal.link
+        ? `https://www.aviasales.com${deal.link}&marker=716647`
+        : buildAviasalesUrl(origin, dest, deal.departure_at, null);
+      
+      const depDate = deal.departure_at ? deal.departure_at.slice(0,10) : null;
+      const retDate = null; // prices_for_dates is one-way pricing
+      
+      await pool.query(
+        `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, expires_at, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, departure_date, return_date, airline, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,$8,$9,$10,'aviasales',$11,$12,$13,$14,false,'travelpayouts_v3',true,$15,false,true,$16,$17,$18,NOW(),NOW())
+         ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, affiliate_url=$10, urgency_type=$11, expires_at=$12, is_error_fare=$14, badge=$15, departure_date=$16, return_date=$17, airline=$18, is_active=true, updated_at=NOW()`,
+        [
+          id, 'flight',
+          isError ? `🚨 ${originCity} → ${destCity} from $${price}` : `✈️ ${originCity} → ${destCity} from $${price}`,
+          `${deal.airline || 'Multiple Airlines'} · ${deal.transfers === 0 ? 'Nonstop' : deal.transfers + ' stop'} · ${depDate || 'Flexible dates'}`,
+          price, normalPrice, savingsPct,
+          dest, origin, affiliateUrl,
+          isError ? 'timer' : 'evergreen',
+          isError ? new Date(Date.now() + 12 * 3600 * 1000).toISOString() : null,
+          isError ? 9 : 7,
+          isError,
+          isError ? 'ERROR FARE' : 'DEAL',
+          depDate, retDate, deal.airline || null
+        ]
+      ).catch(err => {
+        // Add missing columns if needed
+        if (err.message.includes('column')) {
+          console.log('Column mismatch, trying basic insert:', err.message.substring(0,80));
+        }
+      });
+    }
+    console.log(`Fetched ${json.data.length} deals for ${origin}`);
   } catch (e) {
     console.error(`fetchDeal ${origin}:`, e.message);
   }
