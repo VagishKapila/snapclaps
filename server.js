@@ -732,6 +732,37 @@ app.post('/api/wallet/setup', authMiddleware, async (req, res) => {
   }
 });
 
+
+// --- Admin: Seed real deals directly ---
+app.post('/api/admin/seed-deals', async (req, res) => {
+  if (req.headers['x-admin-key'] !== 'snapclaps-seed-2026') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const deals = [
+    { id: 'tp-flight-JFK-MXP', orig: 'JFK', dest: 'MXP', price: 143, normal: 870, savings: 83, error: true, title: '🚨 Milan from $143', sub: 'TAP Air Portugal via Lisbon · RT · May 5–15, May 12–22', dep: '2026-05-05', ret: '2026-05-15' },
+    { id: 'tp-flight-ORD-CUN', orig: 'ORD', dest: 'CUN', price: 89, normal: 890, savings: 90, error: true, title: '🚨 Cancun from $89', sub: 'American Airlines · Nonstop · RT · Apr 28–May 8', dep: '2026-04-28', ret: '2026-05-08' },
+    { id: 'tp-flight-LAX-NRT', orig: 'LAX', dest: 'NRT', price: 487, normal: 1100, savings: 56, error: false, title: '✈️ Tokyo from $487', sub: 'ANA via Tokyo · RT · Oct 2026', dep: '2026-10-01', ret: '2026-10-14' },
+    { id: 'tp-flight-SFO-CDG', orig: 'SFO', dest: 'CDG', price: 312, normal: 870, savings: 64, error: true, title: '🚨 Paris from $312', sub: 'Air France · RT · Jun 2026', dep: '2026-06-01', ret: '2026-06-15' },
+    { id: 'tp-flight-JFK-LHR', orig: 'JFK', dest: 'LHR', price: 298, normal: 780, savings: 62, error: false, title: '✈️ London from $298', sub: 'British Airways · RT · May 3–22', dep: '2026-05-03', ret: '2026-05-22' },
+    { id: 'tp-flight-LAX-DPS', orig: 'LAX', dest: 'DPS', price: 487, normal: 1200, savings: 59, error: false, title: '✈️ Bali from $487', sub: 'ANA via Tokyo · RT · Oct 12–22', dep: '2026-10-12', ret: '2026-10-22' },
+    { id: 'tp-flight-JFK-CUN', orig: 'JFK', dest: 'CUN', price: 198, normal: 520, savings: 62, error: false, title: '✈️ Cancun from $198', sub: 'JetBlue · Nonstop · RT · May 1–15', dep: '2026-05-01', ret: '2026-05-15' },
+    { id: 'tp-flight-SFO-NRT', orig: 'SFO', dest: 'NRT', price: 647, normal: 1100, savings: 41, error: false, title: '✈️ Tokyo from $647', sub: 'ANA · Nonstop · RT · Oct 2026', dep: '2026-10-01', ret: '2026-10-14' },
+  ];
+  
+  let count = 0;
+  for (const d of deals) {
+    const aff = `https://www.aviasales.com/?marker=716647&origin=${d.orig}&destination=${d.dest}&depart_date=${d.dep}&return_date=${d.ret}`;
+    await pool.query(
+      `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,$8,$9,$10,'aviasales',$11,$12,$13,false,'manual',true,$14,false,false,NOW(),NOW())
+       ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, destination_airport=$8, origin_airport=$9, affiliate_url=$10, urgency_type=$11, viral_score=$12, is_error_fare=$13, badge=$14, updated_at=NOW()`,
+      [d.id,'flight',d.title,d.sub,d.price,d.normal,d.savings,d.dest,d.orig,aff,d.error?'timer':'evergreen',d.error?9:7,d.error,d.error?'HOT':'DEAL']
+    );
+    count++;
+  }
+  res.json({ data: { seeded: count, message: 'Real deals seeded successfully' } });
+});
+
 // --- SPA fallback — serve React app ---
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/blog/')) {

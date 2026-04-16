@@ -74,13 +74,16 @@ export function useDeals(): UseDealsResult {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/deals');
+        const res = await fetch('/api/deals?limit=30');
         if (!res.ok) throw new Error('API error');
-        const data = await res.json();
-        const mapped = Array.isArray(data)
-          ? data.slice(0, 20).map((d, i) => mapServerDeal(d as Record<string, unknown>, i))
-          : [];
-        setDeals(mapped.length > 0 ? mapped : defaultDeals());
+        const json = await res.json();
+        // API returns { data: [...], count: N }
+        const items = Array.isArray(json) ? json : (json.data || []);
+        const mapped = items
+          .filter((d: Record<string, unknown>) => (d.deal_price || d.price) && (d.destination_airport || d.destination) && d.id !== 'airhelp-evergreen' && !String(d.id || '').includes('evergreen'))
+          .slice(0, 20)
+          .map((d: Record<string, unknown>, i: number) => mapServerDeal(d, i));
+        setDeals(mapped.length >= 2 ? mapped : defaultDeals());
       } catch {
         setDeals(defaultDeals());
         setError(null); // silently use mock data if API fails
