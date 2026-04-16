@@ -78,10 +78,29 @@ async function initializeDatabase() {
       "ALTER TABLE deals ADD COLUMN IF NOT EXISTS return_date DATE",
       "ALTER TABLE deals ADD COLUMN IF NOT EXISTS airline VARCHAR(100)",
       "ALTER TABLE deals ADD COLUMN IF NOT EXISTS origin VARCHAR(10)",
+      // Part B+C schema additions
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS typical_expiry_hours INTEGER DEFAULT 48",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS found_at TIMESTAMP DEFAULT NOW()",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS deal_type VARCHAR(20) DEFAULT 'flight'",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS hotel_name VARCHAR(200)",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS hotel_stars NUMERIC(2,1)",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS hotel_city VARCHAR(100)",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS nights INTEGER",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS check_in DATE",
+      "ALTER TABLE deals ADD COLUMN IF NOT EXISTS check_out DATE",
     ];
     for (const cmd of alterCmds) {
       await pool.query(cmd).catch(() => {});
     }
+
+    // Clean up garbage data from old seed entries with bad affiliate URLs
+    await pool.query(`
+      DELETE FROM deals
+      WHERE affiliate_url LIKE '%params=%'
+         OR affiliate_url LIKE '%depart_date=%'
+         OR (deal_price IS NULL AND price IS NULL)
+    `).catch(() => {});
+
     console.log('Database tables initialized');
   } catch (err) {
     console.error('Database initialization error:', err.message);
@@ -741,10 +760,12 @@ async function fetchAndStoreDeal(origin) {
       const depDate = deal.departure_at ? deal.departure_at.slice(0,10) : null;
       const retDate = null; // prices_for_dates is one-way pricing
       
+      const expiryHours = isError ? 12 : 48;
+      const expiresAt = isError ? new Date(Date.now() + expiryHours * 3_600_000).toISOString() : null;
       await pool.query(
-        `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, expires_at, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, departure_date, return_date, airline, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,$8,$9,$10,'aviasales',$11,$12,$13,$14,false,'travelpayouts_v3',true,$15,false,true,$16,$17,$18,NOW(),NOW())
-         ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, affiliate_url=$10, urgency_type=$11, expires_at=$12, is_error_fare=$14, badge=$15, departure_date=$16, return_date=$17, airline=$18, is_active=true, updated_at=NOW()`,
+        `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, expires_at, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, departure_date, return_date, airline, typical_expiry_hours, found_at, deal_type, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,$8,$9,$10,'aviasales',$11,$12,$13,$14,false,'travelpayouts_v3',true,$15,false,true,$16,$17,$18,$19,NOW(),'flight',NOW(),NOW())
+         ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, affiliate_url=$10, urgency_type=$11, expires_at=$12, is_error_fare=$14, badge=$15, departure_date=$16, return_date=$17, airline=$18, typical_expiry_hours=$19, is_active=true, updated_at=NOW()`,
         [
           id, 'flight',
           isError ? `🚨 ${originCity} → ${destCity} from $${price}` : `✈️ ${originCity} → ${destCity} from $${price}`,
@@ -752,16 +773,18 @@ async function fetchAndStoreDeal(origin) {
           price, normalPrice, savingsPct,
           dest, origin, affiliateUrl,
           isError ? 'timer' : 'evergreen',
-          isError ? new Date(Date.now() + 12 * 3600 * 1000).toISOString() : null,
+          expiresAt,
           isError ? 9 : 7,
           isError,
           isError ? 'ERROR FARE' : 'DEAL',
-          depDate, retDate, deal.airline || null
+          depDate, retDate, deal.airline || null,
+          expiryHours
         ]
       ).catch(err => {
-        // Add missing columns if needed
         if (err.message.includes('column')) {
-          console.log('Column mismatch, trying basic insert:', err.message.substring(0,80));
+          console.log('Column mismatch:', err.message.substring(0,120));
+        } else {
+          console.error('Insert error:', err.message.substring(0,120));
         }
       });
     }
@@ -771,20 +794,127 @@ async function fetchAndStoreDeal(origin) {
   }
 }
 
-async function refreshDeals() {
-  console.log('Refreshing deals from Travelpayouts...');
-  // Deactivate expired timer deals
-  await pool.query("UPDATE deals SET is_active=false WHERE urgency_type='timer' AND expires_at < NOW()").catch(() => {});
-  for (const airport of AIRPORTS) {
-    await fetchAndStoreDeal(airport);
-    await new Promise(r => setTimeout(r, 500)); // throttle
+// --- Hotellook fetcher (uses existing TRAVELPAYOUTS_TOKEN) ---
+const HOTEL_DESTINATIONS = [
+  { city: 'New York', iata: 'JFK', loc: 'New York,United States' },
+  { city: 'Los Angeles', iata: 'LAX', loc: 'Los Angeles,United States' },
+  { city: 'Miami', iata: 'MIA', loc: 'Miami,United States' },
+  { city: 'Paris', iata: 'CDG', loc: 'Paris,France' },
+  { city: 'London', iata: 'LHR', loc: 'London,United Kingdom' },
+  { city: 'Rome', iata: 'FCO', loc: 'Rome,Italy' },
+  { city: 'Tokyo', iata: 'NRT', loc: 'Tokyo,Japan' },
+  { city: 'Bali', iata: 'DPS', loc: 'Bali,Indonesia' },
+  { city: 'Cancun', iata: 'CUN', loc: 'Cancun,Mexico' },
+  { city: 'Barcelona', iata: 'BCN', loc: 'Barcelona,Spain' },
+];
+
+async function fetchAndStoreHotelDeals() {
+  if (!TRAVELPAYOUTS_TOKEN) {
+    console.log('Skip hotel fetch: TRAVELPAYOUTS_TOKEN not set');
+    return 0;
   }
-  console.log('Deals refreshed.');
+  let count = 0;
+  for (const dest of HOTEL_DESTINATIONS) {
+    try {
+      // Hotellook cache API — returns popular hotels with prices
+      const checkIn = new Date(); checkIn.setDate(checkIn.getDate() + 14);
+      const checkOut = new Date(checkIn); checkOut.setDate(checkOut.getDate() + 3);
+      const fmt = (d) => d.toISOString().slice(0, 10);
+      const url = `https://engine.hotellook.com/api/v2/cache.json?location=${encodeURIComponent(dest.loc)}&checkIn=${fmt(checkIn)}&checkOut=${fmt(checkOut)}&adults=2&token=${TRAVELPAYOUTS_TOKEN}&limit=5&currency=USD`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const json = await res.json();
+      const hotels = Array.isArray(json) ? json : (json.results || json.hotels || []);
+      for (const h of hotels.slice(0, 3)) {
+        const pricePerNight = Math.round(h.priceFrom || h.price || 0);
+        if (!pricePerNight || pricePerNight <= 0) continue;
+        const nights = 3;
+        const totalPrice = pricePerNight * nights;
+        const normalTotal = Math.round(totalPrice * 1.8);
+        const savingsPct = Math.round(((normalTotal - totalPrice) / normalTotal) * 100);
+        const stars = h.stars || 3;
+        const hotelName = h.name || h.hotelName || 'Hotel';
+        const hotelId = h.id || h.hotelId || '';
+        const bookUrl = `https://search.hotellook.com/hotels?hotelId=${hotelId}&checkIn=${fmt(checkIn)}&checkOut=${fmt(checkOut)}&adults=2&marker=716647`;
+        const id = `hl-hotel-${dest.iata}-${String(hotelId)}`;
+        await pool.query(
+          `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, expires_at, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, typical_expiry_hours, found_at, deal_type, hotel_name, hotel_stars, hotel_city, nights, check_in, check_out, created_at, updated_at)
+           VALUES ($1,'hotel',$2,$3,$4,$5,$6,'USD',$7,$7,NULL,$8,'hotellook','evergreen',NULL,$9,false,$10,'hotellook',true,'HOTEL DEAL',false,false,72,NOW(),'hotel',$11,$12,$13,$14,$15,$16,NOW(),NOW())
+           ON CONFLICT (id) DO UPDATE SET deal_price=$4, normal_price=$5, savings_pct=$6, affiliate_url=$8, hotel_name=$11, hotel_stars=$12, hotel_city=$13, nights=$14, check_in=$15, check_out=$16, is_active=true, updated_at=NOW()`,
+          [id, `🏨 ${dest.city} — $${pricePerNight}/night`, `${hotelName} · ${stars}★ · ${nights} nights · Instant booking`,
+           totalPrice, normalTotal, savingsPct, dest.iata, bookUrl,
+           stars >= 4 ? 8 : 6, stars >= 4,
+           hotelName, stars, dest.city, nights, fmt(checkIn), fmt(checkOut)]
+        ).catch(e => console.error('hotel insert err:', e.message.substring(0, 80)));
+        count++;
+      }
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      console.error(`Hotellook ${dest.city}:`, e.message);
+    }
+  }
+  return count;
 }
 
-// Run on start + every 15 min
+// --- Kiwi fetcher placeholder (KIWI_API_KEY not set — blocked) ---
+async function fetchKiwiDeals() {
+  const key = process.env.KIWI_API_KEY;
+  if (!key) {
+    // KIWI_API_KEY not set in Railway — skipping Kiwi source
+    return 0;
+  }
+  // TODO: implement when KIWI_API_KEY is added to Railway
+  return 0;
+}
+
+// --- Unified orchestrator ---
+async function refreshDeals() {
+  console.log('[Orchestrator] Starting deal refresh...');
+
+  // 1. Hard-delete truly expired timer deals (not just deactivate)
+  const deleted = await pool.query(
+    "DELETE FROM deals WHERE urgency_type='timer' AND expires_at < NOW() - INTERVAL '1 hour' RETURNING id"
+  ).catch(() => ({ rows: [] }));
+  if (deleted.rows.length > 0) console.log(`[Orchestrator] Deleted ${deleted.rows.length} expired deals`);
+
+  // 2. Deactivate timer deals that just expired (within last hour — keep briefly for in-flight pageviews)
+  await pool.query(
+    "UPDATE deals SET is_active=false WHERE urgency_type='timer' AND expires_at < NOW() AND is_active=true"
+  ).catch(() => {});
+
+  // 3. Fetch Travelpayouts flight deals
+  let flightCount = 0;
+  for (const airport of AIRPORTS) {
+    await fetchAndStoreDeal(airport);
+    flightCount++;
+    await new Promise(r => setTimeout(r, 500));
+  }
+  console.log(`[Orchestrator] Processed ${flightCount} flight origins`);
+
+  // 4. Fetch Hotellook hotel deals
+  const hotelCount = await fetchAndStoreHotelDeals();
+  console.log(`[Orchestrator] Stored ${hotelCount} hotel deals`);
+
+  // 5. Fetch Kiwi (no-op if key missing)
+  const kiwiCount = await fetchKiwiDeals();
+  if (kiwiCount > 0) console.log(`[Orchestrator] Stored ${kiwiCount} Kiwi deals`);
+
+  console.log('[Orchestrator] Refresh complete.');
+}
+
+// Auto-delete expired deals every 5 minutes (lightweight)
+async function cleanExpiredDeals() {
+  await pool.query(
+    "DELETE FROM deals WHERE urgency_type='timer' AND expires_at < NOW() - INTERVAL '30 minutes'"
+  ).catch(() => {});
+}
+
+// Run on start + every 15 min for full refresh
 refreshDeals();
 setInterval(refreshDeals, 15 * 60 * 1000);
+
+// Every 5 min: clean expired deals
+setInterval(cleanExpiredDeals, 5 * 60 * 1000);
 
 
 // --- Wallet: Bulk setup (onboarding) ---
@@ -831,12 +961,15 @@ app.post('/api/admin/seed-deals', async (req, res) => {
   
   let count = 0;
   for (const d of deals) {
-    const aff = `https://www.aviasales.com/?marker=716647&origin=${d.orig}&destination=${d.dest}&depart_date=${d.dep}&return_date=${d.ret}`;
+    // Build proper Aviasales search URL with dates baked in (not query params)
+    const aff = buildAviasalesUrl(d.orig, d.dest, d.dep, d.ret);
+    const expiryHours = d.error ? 12 : 48;
+    const expiresAt = d.error ? new Date(Date.now() + expiryHours * 3_600_000).toISOString() : null;
     await pool.query(
-      `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,$8,$9,$10,'aviasales',$11,$12,$13,false,'manual',true,$14,false,false,NOW(),NOW())
-       ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, destination_airport=$8, origin_airport=$9, affiliate_url=$10, urgency_type=$11, viral_score=$12, is_error_fare=$13, badge=$14, updated_at=NOW()`,
-      [d.id,'flight',d.title,d.sub,d.price,d.normal,d.savings,d.dest,d.orig,aff,d.error?'timer':'evergreen',d.error?9:7,d.error,d.error?'HOT':'DEAL']
+      `INSERT INTO deals (id, type, title, subtitle, deal_price, normal_price, savings_pct, currency, destination, destination_airport, origin_airport, affiliate_url, affiliate_program, urgency_type, expires_at, viral_score, is_error_fare, is_luxury, source, is_active, badge, is_evergreen, is_curated, typical_expiry_hours, found_at, deal_type, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,$8,$9,$10,'aviasales',$11,$12,$13,$14,false,'manual',true,$15,false,false,$16,NOW(),'flight',NOW(),NOW())
+       ON CONFLICT (id) DO UPDATE SET deal_price=$5, normal_price=$6, savings_pct=$7, destination_airport=$8, origin_airport=$9, affiliate_url=$10, urgency_type=$11, expires_at=$12, viral_score=$13, is_error_fare=$14, badge=$15, typical_expiry_hours=$16, updated_at=NOW()`,
+      [d.id,'flight',d.title,d.sub,d.price,d.normal,d.savings,d.dest,d.orig,aff,d.error?'timer':'evergreen',expiresAt,d.error?9:7,d.error,d.error?'HOT':'DEAL',expiryHours]
     );
     count++;
   }
