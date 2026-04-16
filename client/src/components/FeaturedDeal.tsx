@@ -161,7 +161,7 @@ export const FeaturedDeal: React.FC<FeaturedDealProps> = ({
               color: '#00C9A7',
             }}
           >
-            ${price}
+            {price}
           </div>
           <div
             style={{
@@ -170,7 +170,7 @@ export const FeaturedDeal: React.FC<FeaturedDealProps> = ({
               textDecoration: 'line-through',
             }}
           >
-            ${wasPrice}
+            {wasPrice}
           </div>
           <div
             style={{
