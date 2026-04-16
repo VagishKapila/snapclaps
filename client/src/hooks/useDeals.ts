@@ -38,7 +38,18 @@ function mapServerDeal(d: Record<string, unknown>, index: number): Deal {
     originalPrice: `$${originalPrice}`,
     savings: `${savings}% off`,
     detail: `${airline} · RT · Found recently`,
-    bookUrl: `https://www.aviasales.com/?marker=716647&origin=${orig}&destination=${dest}`,
+    bookUrl: (() => {
+      // Use actual deal dates if available, else 2 months out
+      const depDate = (d.travel_dates_from as string) || (() => {
+        const dt = new Date(); dt.setMonth(dt.getMonth() + 2);
+        return dt.toISOString().slice(0,10);
+      })();
+      const retDate = (d.travel_dates_to as string) || (() => {
+        const dt = new Date(); dt.setMonth(dt.getMonth() + 2); dt.setDate(dt.getDate() + 10);
+        return dt.toISOString().slice(0,10);
+      })();
+      return `https://www.aviasales.com/?marker=716647&origin=${orig}&destination=${dest}&depart_date=${depDate}&return_date=${retDate}`;
+    })(),
     ctaText: isError ? 'Book Now' : 'Book on Aviasales',
     isLive: isError,
     liveStatus: isError ? 'live' : undefined,
