@@ -8,6 +8,8 @@ const { getAirportsFromZip } = require('../data/zip-airports');
 const { getTransferPartners, getAllCards } = require('../data/transfer-partners');
 const { findDestination, SWEET_SPOTS } = require('../data/sweet-spots');
 const { generateTripPlan } = require('../utils/trip-engine');
+const { generateTripSlides } = require('../utils/deal-card-generator');
+const { generateTripVideo } = require('../utils/video-generator');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -257,9 +259,9 @@ async function generateAndStorePlan(searchId) {
     cards: Array.isArray(search.cards) ? search.cards : JSON.parse(search.cards || '[]'),
   });
 
-  await pool.query(
+  const { rows: planRows } = await pool.query(
     `INSERT INTO trip_plans (search_id, flight_options, hotel_options, card_recommendations, trip_summary)
-     VALUES ($1,$2,$3,$4,$5)`,
+     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
     [searchId,
      JSON.stringify(planData.flight_options),
      JSON.stringify(planData.hotel_options),
@@ -268,15 +270,40 @@ async function generateAndStorePlan(searchId) {
   );
 
   await pool.query(`UPDATE trip_searches SET status='complete' WHERE id=$1`, [searchId]);
+
+  // Generate social media content asynchronously (non-blocking)
+  const planId = planRows[0].id;
+  const summary = planData.trip_summary || {};
+  setImmediate(async () => {
+    try {
+      const slides = await generateTripSlides(planData, search.destination, summary.emoji || '✈️');
+      if (slides.length > 0) {
+        const { generateTripVideo } = require('../utils/video-generator');
+        const videoPath = await generateTripVideo(slides, planId);
+        if (videoPath) {
+          await pool.query(`UPDATE trip_plans SET social_content_path=$1 WHERE id=$2`, [videoPath, planId]);
+        }
+      }
+    } catch (err) {
+      console.error('Social content generation error (non-critical):', err.message);
+    }
+  });
 }
 
 async function checkAccess(sessionId, searchId) {
   if (!sessionId) return false;
-  // Check if this session paid for this search
   try {
+    // Check if the specific search was paid by this session
+    const { rows: r1 } = await pool.query(
+      `SELECT id FROM trip_searches WHERE id=$1 AND session_id=$2 AND status='paid'`,
+      [searchId, sessionId]
+    );
+    if (r1.length > 0) return true;
+
+    // Check anonymous paid-access sentinel rows
     const { rows: r2 } = await pool.query(
-      `SELECT id FROM trip_searches WHERE id=$1 AND status='paid'`,
-      [searchId]
+      `SELECT id FROM trip_searches WHERE session_id=$1 AND status='paid_access'`,
+      [sessionId + '_paid_' + searchId]
     );
     return r2.length > 0;
   } catch { return false; }
