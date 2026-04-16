@@ -138,6 +138,31 @@ app.get('/api/deals', async (req, res) => {
   }
 });
 
+// --- API: Single deal by ID ---
+app.get('/api/deals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM deals WHERE id = $1 AND is_active = true LIMIT 1',
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    const d = result.rows[0];
+    res.json({
+      data: {
+        ...d,
+        is_urgent: d.urgency_type === 'timer' && d.expires_at && new Date(d.expires_at) > new Date(),
+        hours_left: d.expires_at ? Math.max(0, Math.round((new Date(d.expires_at) - new Date()) / 3600000)) : null,
+      }
+    });
+  } catch (err) {
+    console.error('deal/:id error:', err.message);
+    res.status(500).json({ error: 'Failed to load deal' });
+  }
+});
+
 // --- API: Track click ---
 app.post('/api/track-click', async (req, res) => {
   try {

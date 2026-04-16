@@ -1,3 +1,5 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Deal } from '../types';
 
 const TYPE_COLOR: Record<string, string> = {
@@ -18,17 +20,21 @@ const TYPE_BG: Record<string, string> = {
   hotel: 'rgba(14,165,233,0.08)',
 };
 
-function openLink(url: string) {
-  if (url && url !== '#') window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-export function DealCard({ type, badge, route, emoji, price, priceLabel, savings, detail, bookUrl, ctaText, isLive, liveStatus, isTealCta }: Deal) {
+export function DealCard({ id, type, badge, route, emoji, price, priceLabel, savings, detail, bookUrl, ctaText, isLive, liveStatus, isTealCta }: Deal) {
+  const navigate = useNavigate();
   const accent = TYPE_COLOR[type] || '#00C9A7';
   const bg = TYPE_BG[type] || 'rgba(0,201,167,0.06)';
 
+  // All cards → deal landing page first (conversion funnel)
+  const handleCardClick = () => navigate(`/deal/${id}`);
+  const handleCtaClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/deal/${id}`);
+  };
+
   return (
     <div
-      onClick={() => openLink(bookUrl)}
+      onClick={handleCardClick}
       style={{
         minWidth: 240, width: 240,
         background: 'white',
@@ -112,7 +118,7 @@ export function DealCard({ type, badge, route, emoji, price, priceLabel, savings
 
         {/* CTA */}
         <button
-          onClick={e => { e.stopPropagation(); openLink(bookUrl); }}
+          onClick={handleCtaClick}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: isTealCta ? '#00C9A7' : '#0f0d2e',
