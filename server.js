@@ -264,25 +264,16 @@ app.get('/api/deals', optionalAuth, async (req, res) => {
     const { airports, origin, limit = 30, type } = req.query;
     const params = [];
 
-    // Build base query with computed fields
-    // Note: deal_price and normal_price are stored as TEXT — must cast to numeric
+    // Build base query — deal_price/normal_price stored as TEXT; cast to numeric for comparisons
     let query = `
       SELECT *,
         COALESCE(
           expires_at,
           CASE WHEN typical_expiry_hours IS NOT NULL AND found_at IS NOT NULL
-            THEN found_at + (COALESCE(typical_expiry_hours::numeric, 48) * INTERVAL '1 hour')
+            THEN found_at + (COALESCE(typical_expiry_hours, 48) * INTERVAL '1 hour')
             ELSE NULL
           END
-        ) AS effective_expiry,
-        CASE WHEN COALESCE(deal_price::numeric, 0) > 0
-              AND COALESCE(normal_price::numeric, 0) > COALESCE(deal_price::numeric, 0)
-          THEN ROUND(
-            ((COALESCE(normal_price::numeric, 0) - COALESCE(deal_price::numeric, 0))
-             / COALESCE(normal_price::numeric, 1)) * 100
-          )
-          ELSE NULL
-        END AS savings_pct
+        ) AS effective_expiry
       FROM deals
       WHERE is_active = true
         AND COALESCE(deal_price::numeric, 0) > 0
@@ -296,12 +287,12 @@ app.get('/api/deals', optionalAuth, async (req, res) => {
         )
     `;
 
-    // Also filter out deals where estimated expiry has passed
+    // Filter out deals where typical estimated expiry has passed
     query += `
         AND (
           typical_expiry_hours IS NULL
           OR found_at IS NULL
-          OR found_at + (COALESCE(typical_expiry_hours::numeric, 48) * INTERVAL '1 hour') > NOW()
+          OR found_at + (COALESCE(typical_expiry_hours, 48) * INTERVAL '1 hour') > NOW()
         )
     `;
 
@@ -328,8 +319,8 @@ app.get('/api/deals', optionalAuth, async (req, res) => {
       query += ` AND type = $${params.length}`;
     }
 
-    // Sort: soonest-expiring first, then by savings %
-    query += ` ORDER BY effective_expiry ASC NULLS LAST, savings_pct DESC NULLS LAST`;
+    // Sort: error fares first, then by viral_score, then by created_at
+    query += ` ORDER BY is_error_fare DESC NULLS LAST, viral_score DESC NULLS LAST, created_at DESC`;
     params.push(parseInt(String(limit)) || 30);
     query += ` LIMIT $${params.length}`;
 
