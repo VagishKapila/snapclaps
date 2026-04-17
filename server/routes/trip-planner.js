@@ -75,6 +75,8 @@ router.post('/search', async (req, res) => {
 
     const effectiveZip         = zip || zip_code;
     const effectiveDestAirport = destination_airport;
+    // session_id: use provided value, fall back to cookie set by session middleware, or generate one
+    const effectiveSessionId   = session_id || req.sessionId || require('crypto').randomBytes(16).toString('hex');
     const effectiveMonth       = month || travel_month;
     const effectiveDuration    = parseInt(duration || duration_days || 7, 10);
 
@@ -109,7 +111,7 @@ router.post('/search', async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'complete',$9)
       RETURNING id
     `, [
-      session_id || null,
+      effectiveSessionId,
       effectiveZip,
       origin,
       effectiveDestAirport,
