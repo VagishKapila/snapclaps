@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const NAV_LINKS = [
+  { label: 'Plan a Trip', path: '/plan', highlight: true },
   { label: 'Deals', path: '/deals' },
   { label: 'Error Fares', path: '/error-fares' },
   { label: 'Miles & Cards', path: '/miles-cards' },
@@ -33,14 +34,14 @@ export default function Nav() {
 
         {/* Center nav */}
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {NAV_LINKS.map(({ label, path, external }) => (
+          {NAV_LINKS.map(({ label, path, external, highlight }) => (
             <button key={label} onClick={() => handleNav(path, external)} style={{
-              background: 'none', border: 'none', fontSize: 13, fontWeight: 500,
-              color: 'rgba(15,13,46,0.55)', cursor: 'pointer', padding: '6px 12px',
+              background: 'none', border: 'none', fontSize: 13, fontWeight: highlight ? 700 : 500,
+              color: highlight ? '#00C9A7' : 'rgba(15,13,46,0.55)', cursor: 'pointer', padding: '6px 12px',
               borderRadius: 8, transition: 'all 0.15s', fontFamily: "'Inter', sans-serif",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,13,46,0.05)'; (e.currentTarget as HTMLElement).style.color = '#0f0d2e'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(15,13,46,0.55)'; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,13,46,0.05)'; (e.currentTarget as HTMLElement).style.color = highlight ? '#00C9A7' : '#0f0d2e'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = highlight ? '#00C9A7' : 'rgba(15,13,46,0.55)'; }}
             >{label}</button>
           ))}
           {isAuthenticated && (

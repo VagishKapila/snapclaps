@@ -1,8 +1,10 @@
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -111,6 +113,20 @@ initializeDatabase();
 
 // --- Middleware ---
 app.use(express.json());
+app.use(cookieParser());
+
+// Session tracking middleware for Trip Planner
+app.use((req, res, next) => {
+  if (!req.cookies.sc_session) {
+    const sid = crypto.randomBytes(16).toString('hex');
+    res.cookie('sc_session', sid, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
+    req.sessionId = sid;
+  } else {
+    req.sessionId = req.cookies.sc_session;
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowed = (process.env.ALLOWED_ORIGINS || '').split(',');
@@ -915,6 +931,10 @@ setInterval(refreshDeals, 15 * 60 * 1000);
 
 // Every 5 min: clean expired deals
 setInterval(cleanExpiredDeals, 5 * 60 * 1000);
+
+// --- Trip Planner routes ---
+const tripPlannerRouter = require('./server/routes/trip-planner');
+app.use('/api/plan', tripPlannerRouter);
 
 
 // --- Wallet: Bulk setup (onboarding) ---

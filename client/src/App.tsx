@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { WalletPage } from './pages/WalletPage';
 import { WalletOnboardPage } from './pages/WalletOnboardPage';
+import TripPlannerPage from './features/trip-planner/TripPlannerPage';
+import TripResultsPage from './features/trip-planner/TripResultsPage';
 
 export default function App() {
   return (
@@ -30,6 +32,8 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/wallet/onboard" element={<WalletOnboardPage />} />
+          <Route path="/plan" element={<TripPlannerPage />} />
+          <Route path="/plan/:searchId" element={<TripResultsPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
         <Footer />
