@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { Deal } from '../types';
+import { CountdownTimer } from './CountdownTimer';
 
 const TYPE_COLOR: Record<string, string> = {
   error_fare: '#FF6B6B',
@@ -20,16 +20,17 @@ const TYPE_BG: Record<string, string> = {
   hotel: 'rgba(14,165,233,0.08)',
 };
 
-export function DealCard({ id, type, badge, route, emoji, price, priceLabel, savings, detail, bookUrl, ctaText, isLive, liveStatus, isTealCta }: Deal) {
-  const navigate = useNavigate();
+export function DealCard({ type, badge, route, emoji, price, priceLabel, savings, detail, bookUrl, ctaText, isLive, liveStatus, isTealCta, expiresAt }: Deal) {
   const accent = TYPE_COLOR[type] || '#00C9A7';
   const bg = TYPE_BG[type] || 'rgba(0,201,167,0.06)';
 
-  // All cards → deal landing page first (conversion funnel)
-  const handleCardClick = () => navigate(`/deal/${id}`);
+  // Option 1: direct link — open affiliate URL in new tab, skip /deal/:id middleman
+  const handleCardClick = () => {
+    if (bookUrl && bookUrl !== '#') window.open(bookUrl, '_blank', 'noopener,noreferrer');
+  };
   const handleCtaClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/deal/${id}`);
+    if (bookUrl && bookUrl !== '#') window.open(bookUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -110,11 +111,18 @@ export function DealCard({ id, type, badge, route, emoji, price, priceLabel, sav
 
         {/* Single-line detail */}
         <div style={{
-          fontSize: 11, color: 'rgba(15,13,46,0.45)', marginTop: 5, marginBottom: 12,
+          fontSize: 11, color: 'rgba(15,13,46,0.45)', marginTop: 5, marginBottom: 8,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {detail.split('\n')[0]}
         </div>
+
+        {/* Countdown timer — only shows for timed deals */}
+        {expiresAt && (
+          <div style={{ marginLeft: -14, marginRight: -14, marginBottom: 8 }}>
+            <CountdownTimer expiresAt={expiresAt} compact={false} />
+          </div>
+        )}
 
         {/* CTA */}
         <button

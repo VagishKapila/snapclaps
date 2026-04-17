@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install --production --ignore-scripts"]
+
+[phases.build]
+# Skip rebuild — dist/ is pre-built and committed to git
+cmds = []
+
+[start]
+cmd = "node server.js"

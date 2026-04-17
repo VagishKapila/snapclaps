@@ -303,3 +303,39 @@ Going.com's secret: **email subscribers who trust you to find deals.** They buil
 7. **Link quality monitoring** — Who's watching to make sure our affiliate links work and commissions are tracking? (Currently nobody.)
 
 8. **The Booking.com bet** — When we get approved in June, hotels at 25–40% commission could be our biggest revenue driver. How do we maximize hotel searches on the site?
+
+---
+
+## 🧪 Real User Testing — Layer 9 (Installed April 16, 2026)
+
+### Rule
+Before claiming ANY frontend task is "done", run:
+```bash
+npm run test:real-user:production
+```
+This must return zero broken indicators on the LIVE URL.
+"Tests pass" = only when Layer 9 passes. Backend tests, TS compilation, and Vite build do NOT prove frontend works.
+
+### Infrastructure
+- Runner: `tests/real-user/live-site-check.js`
+- Config: `tests/real-user/configs/snapclaps.js`
+- npm scripts: `test:real-user`, `test:real-user:staging`, `test:real-user:production`
+
+### First Layer 9 Run — April 16, 2026 — PARTIAL PASS
+
+**Deal cards (Netflix rows):** ✅ PASS — real prices, real savings, no $0, no NaN%
+**Critical pages (6):** ✅ All return 200
+
+**Bugs found in Hero (FeaturedDeal component):**
+- `$$143` — double dollar sign on main price (price prop already has `$`, template adds another)
+- `$$850` — double dollar sign on was-price strikethrough
+- `$$143` — double dollar sign on "BOOK NOW" button text
+- `83% OFF OFF` — "OFF" duplicated on savings badge (`{_savings} OFF` where `_savings` already contains "OFF")
+
+**Root cause:** `FeaturedDeal.tsx` uses `${price}` or `{_savings} OFF` where the prop values already contain `$` and `OFF` respectively.
+**Fix required:** Remove duplicate `$` from button text and duplicate `OFF` from savings badge.
+**Status:** Not yet fixed — scheduled for follow-up session.
+
+### Lesson Locked In
+The previous `$0 / NaN%` bug in deal cards was caught and fixed by running proper browser-level checks.
+Do not claim frontend is working without Layer 9 PASS screenshot attached.

@@ -185,7 +185,7 @@ export const FeaturedDeal: React.FC<FeaturedDealProps> = ({
               fontWeight: 'bold',
             }}
           >
-            {_savings} OFF
+            {_savings}
           </div>
         </div>
 
@@ -241,7 +241,7 @@ export const FeaturedDeal: React.FC<FeaturedDealProps> = ({
               (e.target as HTMLElement).style.boxShadow = '0 8px 24px rgba(0, 201, 167, 0.3)';
             }}
           >
-            ✈ BOOK NOW — ${price}
+            ✈ BOOK NOW — {price}
           </a>
 
           <button
