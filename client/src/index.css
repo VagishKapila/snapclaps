@@ -13,10 +13,11 @@
 
   html { scroll-behavior: smooth; }
   body {
-    background: var(--cream);
-    color: var(--navy);
+    background: #FAFAF5;
+    color: #1a1a1a;
     overflow-x: hidden;
     padding-bottom: 80px;
+    font-family: 'DM Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
   }
 }
 
