@@ -13,6 +13,17 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
+// --- Stripe webhook (raw body MUST be registered BEFORE express.json()) ───
+// Stripe signature verification requires Buffer, not parsed JSON object.
+// Both paths are registered here so express.json() doesn't consume the body first.
+app.post('/api/plan/webhook',    express.raw({ type: 'application/json' }), (req, res) => webhookProxy(req, res));
+app.post('/api/webhook/stripe',  express.raw({ type: 'application/json' }), (req, res) => webhookProxy(req, res));
+function webhookProxy(req, res) {
+  // Defer to trip-planner router's /webhook handler after patching url
+  req.url = '/webhook';
+  require('./server/routes/trip-planner')(req, res, () => res.status(404).end());
+}
+
 // --- Middleware ---
 app.use(express.json());
 app.use(cookieParser());

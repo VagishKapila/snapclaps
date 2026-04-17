@@ -1,99 +1,280 @@
 // server/routes/trip-planner.js
-// All /api/plan/* endpoints
+// All /api/plan/* endpoints — Checkpoint D rewrite
+//
+// CHANGES FROM PREVIOUS VERSION:
+//   - POST /search: now SYNCHRONOUS. Queries sweet_spots from DB (not JS mock data).
+//     Applies off-peak/peak logic. Calls Seats.aero with 5s timeout for live dates.
+//     Returns new response shape matching TripPlanner.jsx exactly.
+//   - GET /user/tier: new endpoint
+//   - POST /subscribe: supports 'monthly' ($9.99) and 'onetime' ($99 concierge) plan types
+//   - POST /webhook: now updates users.subscription_tier + subscription_min_end
+//   - GET /:id/full: gates on subscription_tier != 'free' AND subscription_min_end > NOW()
+//
+// CACHE STRATEGY (flagged per spec):
+//   PostgreSQL table: seats_aero_cache (cache_key TEXT, response_data JSONB, created_at TIMESTAMPTZ)
+//   TTL: 6 hours. ON CONFLICT (cache_key) DO UPDATE refreshes on new data.
+//   ✅ Survives Railway restarts. No Redis needed at current scale.
+//   Flag: if daily Seats.aero API call volume exceeds 1,000/day, add Redis (Railway plugin available).
+//
+// STRIPE ENV VARS REQUIRED (not yet set in Railway — FLAG):
+//   STRIPE_SECRET_KEY         — live secret key for checkout sessions
+//   STRIPE_WEBHOOK_SECRET     — from `stripe listen` or dashboard
+//   STRIPE_MONTHLY_PRICE_ID   — price_1TLtPqAHP8NRRyLCqObXqQm7 ($9.99/mo, already exists)
+//   STRIPE_ONETIME_PRICE_ID   — $99 one-time concierge price (must be created in Stripe dashboard)
+//
+// mapSeatsAeroCabin LOCATION: server/utils/seats-aero.js, exported as mapSeatsAeroCabin
+
+'use strict';
 
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
 const { getAirportsFromZip } = require('../data/zip-airports');
-const { getTransferPartners, getAllCards } = require('../data/transfer-partners');
-const { findDestination, SWEET_SPOTS } = require('../data/sweet-spots');
-const { generateTripPlan } = require('../utils/trip-engine');
-const { generateTripSlides } = require('../utils/deal-card-generator');
-const { generateTripVideo } = require('../utils/video-generator');
+const { getDateCandidates, mapSeatsAeroCabin } = require('../utils/seats-aero');
+const { effectiveMiles, isOffPeak } = require('../utils/off-peak');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Stripe (optional — only needed for paywall)
+// ── Stripe setup (optional — 503 if not configured) ───────────────────────
 let stripe = null;
 try {
   if (process.env.STRIPE_SECRET_KEY) {
     stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
   }
-} catch(e) { console.warn('Stripe not configured'); }
+} catch (e) { console.warn('Stripe not configured:', e.message); }
 
-// ─── GET /api/plan/destinations ───────────────────────────────────────────
-// Returns all available destinations for Step 2 autocomplete
-router.get('/destinations', (req, res) => {
-  const destinations = SWEET_SPOTS.map(d => ({
-    name: d.destination,
-    airports: d.airports,
-    country_code: d.country_code,
-    emoji: d.emoji,
-    region: d.region,
-  }));
-  res.json({ destinations });
-});
+// Price IDs
+const STRIPE_MONTHLY_PRICE_ID  = process.env.STRIPE_MONTHLY_PRICE_ID  || 'price_1TLtPqAHP8NRRyLCqObXqQm7';
+const STRIPE_ONETIME_PRICE_ID  = process.env.STRIPE_ONETIME_PRICE_ID  || null; // Must be set — see header note
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.snapclaps.com';
 
-// ─── GET /api/plan/cards ──────────────────────────────────────────────────
-// Returns all supported credit cards for Step 3
-router.get('/cards', (req, res) => {
-  res.json({ cards: getAllCards() });
-});
-
-// ─── POST /api/plan/search ────────────────────────────────────────────────
-// Step 4: Submit search, kick off background plan generation
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/plan/search
+// Synchronous: queries sweet_spots, applies off-peak logic, fetches Seats.aero dates
+// ─────────────────────────────────────────────────────────────────────────────
 router.post('/search', async (req, res) => {
   try {
+    // Accept both new TripPlanner.jsx format and old format for backward compat
     const {
-      session_id, zip_code, destination, travel_month,
-      duration_days = 7, cabin_class = 'any', flexible_dates = true,
-      cards = [], no_cards = false,
+      // New format (from TripPlanner.jsx Step 4)
+      zip,
+      destination_airport,
+      month,
+      duration,
+      // Old format fields (backward compat)
+      zip_code,
+      destination,        // city name — ignored in favor of destination_airport
+      travel_month,
+      duration_days,
+      cabin_class = 'any',
+      session_id,
     } = req.body;
 
-    if (!session_id) return res.status(400).json({ error: 'session_id required' });
-    if (!destination) return res.status(400).json({ error: 'destination required' });
+    const effectiveZip         = zip || zip_code;
+    const effectiveDestAirport = destination_airport;
+    const effectiveMonth       = month || travel_month;
+    const effectiveDuration    = parseInt(duration || duration_days || 7, 10);
 
-    // Resolve airports from zip
-    const homeAirports = getAirportsFromZip(zip_code);
-    const destData = findDestination(destination);
-    const destAirports = destData ? destData.airports : [];
-    const transferPartners = no_cards ? [] : getTransferPartners(cards.map(c => c.card_id));
+    if (!effectiveDestAirport) {
+      return res.status(400).json({ error: 'destination_airport required (IATA code, e.g. "FCO")' });
+    }
+    if (!effectiveMonth || !/^\d{4}-\d{2}$/.test(effectiveMonth)) {
+      return res.status(400).json({ error: 'month required in YYYY-MM format (e.g. "2026-10")' });
+    }
 
-    // Create search record
-    const { rows } = await pool.query(
-      `INSERT INTO trip_searches
-        (session_id, zip_code, home_airports, destination, destination_airports, travel_month,
-         duration_days, cabin_class, flexible_dates, cards, transfer_partners, no_cards, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'processing')
-       RETURNING id`,
-      [session_id, zip_code, homeAirports, destination, destAirports, travel_month,
-       duration_days, cabin_class, flexible_dates, JSON.stringify(cards),
-       transferPartners, no_cards]
-    );
-    const searchId = rows[0].id;
+    // ── 1. Resolve home airport from ZIP ─────────────────────────────────
+    const homeAirports = getAirportsFromZip(effectiveZip || '94110');
+    const origin = homeAirports[0] || 'SFO';
 
-    // Generate plan asynchronously (don't await — let client poll)
-    generateAndStorePlan(searchId).catch(err => {
-      console.error('plan gen error:', err);
-      pool.query(`UPDATE trip_searches SET status='error' WHERE id=$1`, [searchId]);
+    // ── 2. Query sweet_spots from DB ─────────────────────────────────────
+    // BEFORE (mock): used findDestination() from server/data/sweet-spots.js
+    // AFTER  (DB):   SELECT * FROM sweet_spots WHERE destination_airport = $1
+    const { rows: sweetSpots } = await pool.query(`
+      SELECT *
+      FROM sweet_spots
+      WHERE destination_airport = $1
+        AND cabin IN ('economy', 'business')
+        AND is_active = true
+      ORDER BY miles_required ASC
+    `, [effectiveDestAirport]);
+
+    // ── 3. Create search record before anything else (needed for search_id) ─
+    const { rows: [searchRow] } = await pool.query(`
+      INSERT INTO trip_searches
+        (session_id, zip_code, origin_airport, destination_airport, destination,
+         travel_month, duration_days, cabin_class, status, home_airports)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'complete',$9)
+      RETURNING id
+    `, [
+      session_id || null,
+      effectiveZip,
+      origin,
+      effectiveDestAirport,
+      destination || effectiveDestAirport,
+      effectiveMonth,
+      effectiveDuration,
+      cabin_class,
+      [origin],
+    ]);
+    const searchId = String(searchRow.id);
+
+    // ── 4. Empty state — no active rows for this destination ─────────────
+    if (sweetSpots.length === 0) {
+      return res.json({
+        search_id: searchId,
+        business: null,
+        economy: null,
+        cash_estimate: null,
+        transfer_from: [],
+        dates: [],
+        program_names_hidden: true,
+        availability_notes: 'We\'re still researching sweet spots for this destination. Check back soon.',
+      });
+    }
+
+    // ── 5. Apply off-peak / peak logic to each row ────────────────────────
+    const enriched = sweetSpots.map(spot => {
+      const { effectiveMiles: miles, isOffPeak: offPeak, peakMiles } = effectiveMiles(spot, effectiveMonth);
+      return { ...spot, effective_miles: miles, is_off_peak: offPeak, peak_miles_required: peakMiles };
     });
 
-    res.json({ search_id: searchId, status: 'processing', estimated_seconds: 8 });
+    // ── 6. Separate business vs economy, pick best (lowest effective miles) ─
+    const bizSpots = enriched.filter(s => s.cabin === 'business').sort((a, b) => a.effective_miles - b.effective_miles);
+    const ecoSpots = enriched.filter(s => s.cabin === 'economy').sort((a, b) => a.effective_miles - b.effective_miles);
+    const bestBiz  = bizSpots[0] || null;
+    const bestEco  = ecoSpots[0] || null;
+
+    // ── 7. Collect all transfer programs across active spots ──────────────
+    const allTransferPrograms = [...new Set(
+      enriched.flatMap(s => Array.isArray(s.transfer_bank_programs) ? s.transfer_bank_programs : [])
+    )];
+
+    // ── 8. Live date candidates from Seats.aero (5s timeout, fail gracefully) ─
+    const { startDate, endDate } = monthToDateRange(effectiveMonth);
+    const dates = await getDateCandidates({
+      origin,
+      dest: effectiveDestAirport,
+      startDate,
+      endDate,
+      duration: effectiveDuration,
+      needBusiness: !!bestBiz,
+      needEconomy:  !!bestEco,
+    });
+
+    // ── 9. Cash estimate — use DB typical_cash_price (Travelpayouts fallback later) ─
+    const cashEstimate = bestBiz?.typical_cash_price || bestEco?.typical_cash_price || null;
+
+    // ── 10. Build availability_notes for no-date case ─────────────────────
+    const monthLabel = formatMonth(effectiveMonth);
+    const availNotes = dates.length === 0
+      ? `No saver award availability found in ${monthLabel}. We search daily — we'll alert you when space opens.`
+      : null;
+
+    // ── 11. Respond ───────────────────────────────────────────────────────
+    return res.json({
+      search_id: searchId,
+      business: bestBiz ? {
+        oneway_miles:   bestBiz.effective_miles,
+        oneway_taxes:   bestBiz.typical_taxes   || 0,
+        rt_miles:       bestBiz.effective_miles * 2,
+        rt_taxes:       (bestBiz.typical_taxes  || 0) * 2,
+        programs_count: bizSpots.length,
+      } : null,
+      economy: bestEco ? {
+        oneway_miles:   bestEco.effective_miles,
+        oneway_taxes:   bestEco.typical_taxes   || 0,
+        rt_miles:       bestEco.effective_miles * 2,
+        rt_taxes:       (bestEco.typical_taxes  || 0) * 2,
+        programs_count: ecoSpots.length,
+      } : null,
+      cash_estimate: cashEstimate,
+      transfer_from: allTransferPrograms,
+      dates,
+      program_names_hidden: true,
+      ...(availNotes ? { availability_notes: availNotes } : {}),
+    });
+
   } catch (err) {
     console.error('POST /plan/search error:', err);
-    res.status(500).json({ error: 'Failed to start search' });
+    return res.status(500).json({
+      error: 'Search failed',
+      ...(process.env.NODE_ENV !== 'production' ? { details: err.message } : {}),
+    });
   }
 });
 
-// ─── GET /api/plan/:searchId/status ──────────────────────────────────────
-// Polling endpoint — returns current status
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/plan/destinations
+// Returns all active destination cities + airports for Step 2 autocomplete
+// BEFORE: used SWEET_SPOTS JS array from server/data/sweet-spots.js
+// AFTER:  queries sweet_spots DB table
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/destinations', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT DISTINCT
+        destination_city   AS name,
+        destination_airport AS airport,
+        destination_country AS country,
+        region
+      FROM sweet_spots
+      WHERE is_active = true
+      ORDER BY destination_city
+    `);
+    res.json({ destinations: rows });
+  } catch (err) {
+    console.error('GET /plan/destinations error:', err);
+    res.status(500).json({ error: 'Failed to load destinations' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/user/tier
+// Returns the current user's subscription tier.
+// Requires x-session-id header or session_id query param.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/user/tier', async (req, res) => {
+  try {
+    const sessionId = req.headers['x-session-id'] || req.query.session_id;
+    if (!sessionId) return res.json({ tier: 'free', subscription_min_end: null });
+
+    // Look up user by session (anonymous users without auth use session-based access)
+    const { rows } = await pool.query(`
+      SELECT u.subscription_tier, u.subscription_min_end
+      FROM users u
+      WHERE u.id IN (
+        SELECT user_id FROM trip_searches
+        WHERE session_id = $1 AND user_id IS NOT NULL
+        LIMIT 1
+      )
+    `, [sessionId]);
+
+    if (!rows[0]) return res.json({ tier: 'free', subscription_min_end: null });
+
+    const user = rows[0];
+    // Check if subscription is still valid
+    const isActive = user.subscription_min_end && new Date(user.subscription_min_end) > new Date();
+    const tier = (user.subscription_tier && user.subscription_tier !== 'free' && isActive)
+      ? user.subscription_tier
+      : 'free';
+
+    res.json({ tier, subscription_min_end: user.subscription_min_end });
+  } catch (err) {
+    console.error('GET /plan/user/tier error:', err);
+    res.json({ tier: 'free', subscription_min_end: null });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/plan/:searchId/status
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/:searchId/status', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT ts.id, ts.status, tp.id as plan_id
+      `SELECT ts.id, ts.status, tp.id AS plan_id
        FROM trip_searches ts
        LEFT JOIN trip_plans tp ON tp.search_id = ts.id
        WHERE ts.id = $1`,
@@ -106,8 +287,9 @@ router.get('/:searchId/status', async (req, res) => {
   }
 });
 
-// ─── GET /api/plan/:searchId/teaser ──────────────────────────────────────
-// Free preview (no payment required) — just the summary + teaser
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/plan/:searchId/teaser
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/:searchId/teaser', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -119,11 +301,9 @@ router.get('/:searchId/teaser', async (req, res) => {
       [req.params.searchId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Plan not found' });
-
     const plan = rows[0];
     const summary = plan.trip_summary || {};
-    const flights = (plan.flight_options || []).slice(0, 1); // tease just top option
-
+    const flights = (plan.flight_options || []).slice(0, 1);
     res.json({
       destination: plan.destination,
       travel_month: plan.travel_month,
@@ -134,7 +314,7 @@ router.get('/:searchId/teaser', async (req, res) => {
       best_program: summary.best_program,
       total_flight_miles: summary.total_flight_miles,
       teaser_flight: flights[0] ? {
-        program_name: flights[0].program_name,
+        program_name: '••••••••',   // blurred until paid
         miles_cost: flights[0].miles_cost,
         cabin: flights[0].cabin,
       } : null,
@@ -146,42 +326,47 @@ router.get('/:searchId/teaser', async (req, res) => {
   }
 });
 
-// ─── GET /api/plan/:searchId/full ────────────────────────────────────────
-// Full plan — requires payment check
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/plan/:searchId/full
+// Full plan — program names UNBLURRED.
+// Gate: subscription_tier != 'free' AND subscription_min_end > NOW()
+// Returns 403 (not 402) if not subscribed — distinct from 402 payment-required.
+// ─────────────────────────────────────────────────────────────────────────────
 router.get('/:searchId/full', async (req, res) => {
   try {
     const sessionId = req.headers['x-session-id'] || req.query.session_id;
 
-    // Check payment
     const { rows: searchRows } = await pool.query(
       `SELECT ts.*, tp.flight_options, tp.hotel_options, tp.card_recommendations, tp.trip_summary
        FROM trip_searches ts
-       JOIN trip_plans tp ON tp.search_id = ts.id
+       LEFT JOIN trip_plans tp ON tp.search_id = ts.id
        WHERE ts.id = $1`,
       [req.params.searchId]
     );
     if (!searchRows[0]) return res.status(404).json({ error: 'Plan not found' });
-
     const search = searchRows[0];
 
-    // Check if user has access (paid session or subscribed user)
-    const hasPaid = await checkAccess(sessionId, search.id);
-    if (!hasPaid) {
-      return res.status(402).json({
-        error: 'Payment required',
+    // Check subscription access
+    const hasAccess = await checkSubscriptionAccess(sessionId, search.user_id, search.id);
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: 'Subscription required',
         search_id: search.id,
-        pricing: { monthly: 999, onetime: 9900 }, // cents
+        pricing: {
+          monthly:  { price_cents: 999,  price_id: STRIPE_MONTHLY_PRICE_ID },
+          onetime:  { price_cents: 9900, price_id: STRIPE_ONETIME_PRICE_ID },
+        },
       });
     }
 
     res.json({
-      search_id: search.id,
-      destination: search.destination,
-      travel_month: search.travel_month,
-      duration_days: search.duration_days,
-      trip_summary: search.trip_summary,
-      flight_options: search.flight_options,
-      hotel_options: search.hotel_options,
+      search_id:            search.id,
+      destination:          search.destination,
+      travel_month:         search.travel_month,
+      duration_days:        search.duration_days,
+      trip_summary:         search.trip_summary,
+      flight_options:       search.flight_options,
+      hotel_options:        search.hotel_options,
       card_recommendations: search.card_recommendations,
     });
   } catch (err) {
@@ -190,123 +375,190 @@ router.get('/:searchId/full', async (req, res) => {
   }
 });
 
-// ─── POST /api/plan/subscribe ─────────────────────────────────────────────
-// Create Stripe checkout session for paywall
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/plan/subscribe
+// Creates a Stripe Checkout session.
+// plan: 'monthly' → $9.99/mo subscription (3-mo min enforced via metadata)
+// plan: 'onetime' → $99 one-time concierge access (30-day access)
+// ─────────────────────────────────────────────────────────────────────────────
 router.post('/subscribe', async (req, res) => {
   try {
-    if (!stripe) return res.status(503).json({ error: 'Payments not configured' });
+    if (!stripe) {
+      return res.status(503).json({
+        error: 'Payments not configured',
+        fix: 'Set STRIPE_SECRET_KEY in Railway environment variables',
+      });
+    }
 
-    const { search_id, plan_type, session_id } = req.body;
-    if (!search_id || !plan_type) return res.status(400).json({ error: 'search_id and plan_type required' });
+    const { search_id, plan, plan_type, session_id } = req.body;
+    const effectivePlan = plan || plan_type; // accept both keys
 
-    const priceId = plan_type === 'monthly'
-      ? process.env.STRIPE_MONTHLY_PRICE_ID || 'price_1TLtPqAHP8NRRyLCqObXqQm7'
-      : process.env.STRIPE_ONETIME_PRICE_ID;
+    if (!search_id) return res.status(400).json({ error: 'search_id required' });
+    if (!effectivePlan) return res.status(400).json({ error: 'plan required: "monthly" or "onetime"' });
 
-    if (!priceId) return res.status(503).json({ error: 'Price not configured' });
+    let priceId, mode, subscriptionData;
+
+    if (effectivePlan === 'monthly') {
+      priceId = STRIPE_MONTHLY_PRICE_ID;
+      mode = 'subscription';
+      // 3-month minimum: enforced in webhook via subscription_min_end = NOW() + 3 months
+      subscriptionData = { metadata: { min_months: '3' } };
+    } else if (effectivePlan === 'onetime') {
+      if (!STRIPE_ONETIME_PRICE_ID) {
+        return res.status(503).json({
+          error: 'One-time price not configured',
+          fix: 'Create a $99 one-time price in Stripe dashboard and set STRIPE_ONETIME_PRICE_ID in Railway',
+        });
+      }
+      priceId = STRIPE_ONETIME_PRICE_ID;
+      mode = 'payment';
+    } else {
+      return res.status(400).json({ error: 'plan must be "monthly" or "onetime"' });
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      mode: plan_type === 'monthly' ? 'subscription' : 'payment',
-      success_url: `${process.env.FRONTEND_URL || 'https://www.snapclaps.com'}/plan/${search_id}?paid=true&session_id=${session_id}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'https://www.snapclaps.com'}/plan/${search_id}`,
-      metadata: { search_id: String(search_id), plan_type, session_id: session_id || '' },
+      mode,
+      ...(subscriptionData ? { subscription_data: subscriptionData } : {}),
+      success_url: `${FRONTEND_URL}/plan/${search_id}?paid=true&session_id=${session_id || ''}`,
+      cancel_url:  `${FRONTEND_URL}/plan/${search_id}`,
+      metadata: {
+        search_id:   String(search_id),
+        plan_type:   effectivePlan,
+        session_id:  session_id || '',
+      },
     });
 
-    res.json({ checkout_url: session.url });
+    res.json({ checkout_url: session.url, session_id: session.id });
   } catch (err) {
     console.error('POST /plan/subscribe error:', err);
-    res.status(500).json({ error: 'Checkout failed' });
+    res.status(500).json({ error: 'Checkout session creation failed' });
   }
 });
 
-// ─── POST /api/plan/webhook ───────────────────────────────────────────────
-// Stripe webhook — mark search as paid after successful payment
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/plan/webhook  (also registered as /api/webhook/stripe in server.js)
+// Stripe webhook — on checkout.session.completed:
+//   - Monthly: set users.subscription_tier = 'premium', subscription_min_end = +3 months
+//   - One-time: set users.subscription_tier = 'concierge', subscription_min_end = +30 days
+//   - Also mark trip_searches.status = 'paid'
+// ─────────────────────────────────────────────────────────────────────────────
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   if (!stripe) return res.status(503).send('Not configured');
+
   const sig = req.headers['stripe-signature'];
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
+    console.error('Webhook signature error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const { search_id, session_id } = session.metadata || {};
-    if (search_id) {
-      // Store paid session_id -> search_id mapping
-      await pool.query(
-        `UPDATE trip_searches SET status='paid' WHERE id=$1`,
-        [search_id]
-      ).catch(console.error);
-    }
-  }
-  res.json({ received: true });
-});
+    const { search_id, plan_type, session_id } = session.metadata || {};
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
-
-async function generateAndStorePlan(searchId) {
-  const { rows } = await pool.query(`SELECT * FROM trip_searches WHERE id=$1`, [searchId]);
-  if (!rows[0]) throw new Error('Search not found: ' + searchId);
-  const search = rows[0];
-
-  const planData = await generateTripPlan({
-    ...search,
-    cards: Array.isArray(search.cards) ? search.cards : JSON.parse(search.cards || '[]'),
-  });
-
-  const { rows: planRows } = await pool.query(
-    `INSERT INTO trip_plans (search_id, flight_options, hotel_options, card_recommendations, trip_summary)
-     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-    [searchId,
-     JSON.stringify(planData.flight_options),
-     JSON.stringify(planData.hotel_options),
-     JSON.stringify(planData.card_recommendations),
-     JSON.stringify(planData.trip_summary)]
-  );
-
-  await pool.query(`UPDATE trip_searches SET status='complete' WHERE id=$1`, [searchId]);
-
-  // Generate social media content asynchronously (non-blocking)
-  const planId = planRows[0].id;
-  const summary = planData.trip_summary || {};
-  setImmediate(async () => {
     try {
-      const slides = await generateTripSlides(planData, search.destination, summary.emoji || '✈️');
-      if (slides.length > 0) {
-        const { generateTripVideo } = require('../utils/video-generator');
-        const videoPath = await generateTripVideo(slides, planId);
-        if (videoPath) {
-          await pool.query(`UPDATE trip_plans SET social_content_path=$1 WHERE id=$2`, [videoPath, planId]);
+      // Mark search as paid
+      if (search_id) {
+        await pool.query(
+          `UPDATE trip_searches SET status = 'paid' WHERE id = $1`,
+          [search_id]
+        );
+      }
+
+      // Upgrade user subscription tier
+      // Look up user via session_id → trip_searches → user_id
+      if (session_id) {
+        const { rows: userRows } = await pool.query(
+          `SELECT DISTINCT user_id FROM trip_searches
+           WHERE session_id = $1 AND user_id IS NOT NULL LIMIT 1`,
+          [session_id]
+        );
+        const userId = userRows[0]?.user_id;
+
+        if (userId) {
+          const isMonthly = plan_type === 'monthly';
+          const tier      = isMonthly ? 'premium' : 'concierge';
+          // Monthly: 3-month minimum lock. One-time: 30-day access.
+          const minEndInterval = isMonthly ? "INTERVAL '3 months'" : "INTERVAL '30 days'";
+
+          await pool.query(`
+            UPDATE users
+            SET subscription_tier     = $1,
+                subscription_started  = NOW(),
+                subscription_min_end  = NOW() + ${minEndInterval},
+                updated_at            = NOW()
+            WHERE id = $2
+          `, [tier, userId]);
+
+          console.log(`Upgraded user ${userId} to ${tier} (${isMonthly ? '3-month min' : '30 days'})`);
         }
       }
     } catch (err) {
-      console.error('Social content generation error (non-critical):', err.message);
+      console.error('Webhook DB update error:', err.message);
+      // Return 200 anyway — don't cause Stripe to retry for DB errors
     }
-  });
+  }
+
+  res.json({ received: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check if a session/user has an active subscription that grants full plan access.
+ * Gate: subscription_tier != 'free' AND subscription_min_end > NOW()
+ */
+async function checkSubscriptionAccess(sessionId, userId, searchId) {
+  try {
+    // Direct user check
+    if (userId) {
+      const { rows } = await pool.query(
+        `SELECT subscription_tier, subscription_min_end FROM users
+         WHERE id = $1 AND subscription_tier != 'free'
+           AND subscription_min_end > NOW()`,
+        [userId]
+      );
+      if (rows.length > 0) return true;
+    }
+    // Session-based paid search check
+    if (sessionId && searchId) {
+      const { rows } = await pool.query(
+        `SELECT id FROM trip_searches WHERE id = $1 AND session_id = $2 AND status = 'paid'`,
+        [searchId, sessionId]
+      );
+      if (rows.length > 0) return true;
+    }
+    return false;
+  } catch { return false; }
 }
 
-async function checkAccess(sessionId, searchId) {
-  if (!sessionId) return false;
-  try {
-    // Check if the specific search was paid by this session
-    const { rows: r1 } = await pool.query(
-      `SELECT id FROM trip_searches WHERE id=$1 AND session_id=$2 AND status='paid'`,
-      [searchId, sessionId]
-    );
-    if (r1.length > 0) return true;
+/**
+ * Convert 'YYYY-MM' to { startDate: 'YYYY-MM-01', endDate: 'YYYY-MM-DD' }
+ */
+function monthToDateRange(travelMonth) {
+  if (!travelMonth) return { startDate: null, endDate: null };
+  const [year, month] = travelMonth.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    startDate: `${travelMonth}-01`,
+    endDate:   `${travelMonth}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
 
-    // Check anonymous paid-access sentinel rows
-    const { rows: r2 } = await pool.query(
-      `SELECT id FROM trip_searches WHERE session_id=$1 AND status='paid_access'`,
-      [sessionId + '_paid_' + searchId]
-    );
-    return r2.length > 0;
-  } catch { return false; }
+/**
+ * Format 'YYYY-MM' as human label e.g. 'October 2026'
+ */
+function formatMonth(travelMonth) {
+  if (!travelMonth) return travelMonth;
+  const [year, month] = travelMonth.split('-');
+  const d = new Date(Number(year), Number(month) - 1, 1);
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
 
 module.exports = router;
