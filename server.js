@@ -249,47 +249,106 @@ app.get('/api/geo', async (req, res) => {
   }
 });
 
+// US domestic airports list (for is_domestic computed field)
+const US_AIRPORTS_SET = new Set([
+  'SJC','SFO','OAK','JFK','EWR','LGA','LAX','BUR','SNA','ORD','MDW',
+  'MIA','FLL','ATL','DFW','DAL','SEA','BOS','DEN','HNL','OGG','LAS',
+  'DTW','PHX','SLC','IAH','HOU','CLT','RDU','SMF','SCK','PDX','MSP',
+  'STL','MKE','PIT','CLE','IND','CMH','BNA','AUS','SAT','JAX','MEM',
+  'ABQ','TUS','OKC','RIC','BWI','DCA','IAD','MCO','TPA','SAN',
+]);
+
 // --- API: Deals ---
 app.get('/api/deals', optionalAuth, async (req, res) => {
   try {
-    const { origin, limit = 50, type } = req.query;
-    let query = 'SELECT * FROM deals WHERE is_active = true';
+    const { airports, origin, limit = 30, type } = req.query;
     const params = [];
 
-    // Free tier users see only deals from 2+ hours ago
+    // Build base query with computed fields
+    let query = `
+      SELECT *,
+        COALESCE(
+          expires_at,
+          CASE WHEN typical_expiry_hours IS NOT NULL AND found_at IS NOT NULL
+            THEN found_at + (typical_expiry_hours * INTERVAL '1 hour')
+            ELSE NULL
+          END
+        ) AS effective_expiry,
+        CASE WHEN deal_price > 0 AND normal_price > deal_price
+          THEN ROUND(((normal_price - deal_price)::numeric / normal_price) * 100)
+          ELSE NULL
+        END AS savings_pct
+      FROM deals
+      WHERE is_active = true
+        AND deal_price > 0
+        AND normal_price > deal_price
+    `;
+
+    // Only return non-expired deals
+    query += `
+        AND (
+          expires_at IS NULL
+          OR expires_at > NOW()
+        )
+    `;
+
+    // Also filter out deals where estimated expiry has passed
+    query += `
+        AND (
+          typical_expiry_hours IS NULL
+          OR found_at IS NULL
+          OR found_at + (typical_expiry_hours * INTERVAL '1 hour') > NOW()
+        )
+    `;
+
+    // Free tier sees deals from 2+ hours ago (slightly delayed)
     if (!req.user || req.user.tier === 'free') {
       query += ` AND created_at < NOW() - INTERVAL '2 hours'`;
     }
 
-    if (origin) {
+    // Filter by specific airports list (from ZIP lookup)
+    if (airports) {
+      const airportList = String(airports).split(',').map(a => a.trim().toUpperCase()).filter(Boolean);
+      if (airportList.length > 0) {
+        params.push(airportList);
+        query += ` AND (origin_airport = ANY($${params.length}) OR origin_airport IS NULL)`;
+      }
+    } else if (origin) {
+      // Legacy single-airport filter
       params.push(origin.toUpperCase());
       query += ` AND (origin_airport = $${params.length} OR origin_airport IS NULL)`;
     }
+
     if (type) {
       params.push(type);
       query += ` AND type = $${params.length}`;
     }
-    query += ' ORDER BY viral_score DESC NULLS LAST, is_error_fare DESC, created_at DESC';
-    params.push(parseInt(limit) || 50);
+
+    // Sort: soonest-expiring first, then by savings %
+    query += ` ORDER BY effective_expiry ASC NULLS LAST, savings_pct DESC NULLS LAST`;
+    params.push(parseInt(String(limit)) || 30);
     query += ` LIMIT $${params.length}`;
 
     const result = await pool.query(query, params);
+
+    // Add computed fields for frontend
     const deals = result.rows.map(d => ({
       ...d,
+      is_domestic: US_AIRPORTS_SET.has((d.destination_airport || '').toUpperCase()),
       is_urgent: d.urgency_type === 'timer' && d.expires_at && new Date(d.expires_at) > new Date(),
-      hours_left: d.expires_at ? Math.max(0, Math.round((new Date(d.expires_at) - new Date()) / 3600000)) : null,
+      hours_left: d.effective_expiry
+        ? Math.max(0, Math.round((new Date(d.effective_expiry) - new Date()) / 3600000))
+        : null,
+      // Ensure booking_url has marker=716647
+      booking_url: (() => {
+        const url = d.affiliate_url || d.booking_url || '';
+        if (!url) return `https://www.aviasales.com/?marker=716647&origin=${d.origin_airport || ''}&destination=${d.destination_airport || ''}`;
+        if (url.includes('marker=716647')) return url;
+        return url + (url.includes('?') ? '&' : '?') + 'marker=716647';
+      })(),
     }));
 
-    // Inject eSIM promo card every 6 deals
-    const finalDeals = [];
-    deals.forEach((deal, i) => {
-      finalDeals.push(deal);
-      if ((i + 1) % 6 === 0 && i < deals.length - 1) {
-        finalDeals.push(ESIM_PROMOS[0]);
-      }
-    });
-
-    res.json({ data: finalDeals, count: finalDeals.length });
+    res.json({ data: deals, count: deals.length });
   } catch (err) {
     console.error('deals error:', err.message);
     res.status(500).json({ error: 'Failed to load deals' });
