@@ -265,23 +265,27 @@ app.get('/api/deals', optionalAuth, async (req, res) => {
     const params = [];
 
     // Build base query with computed fields
+    // Note: deal_price and normal_price are stored as TEXT — must cast to numeric
     let query = `
       SELECT *,
         COALESCE(
           expires_at,
           CASE WHEN typical_expiry_hours IS NOT NULL AND found_at IS NOT NULL
-            THEN found_at + (typical_expiry_hours * INTERVAL '1 hour')
+            THEN found_at + (COALESCE(typical_expiry_hours::numeric, 48) * INTERVAL '1 hour')
             ELSE NULL
           END
         ) AS effective_expiry,
-        CASE WHEN deal_price > 0 AND normal_price > deal_price
-          THEN ROUND(((normal_price - deal_price)::numeric / normal_price) * 100)
+        CASE WHEN COALESCE(deal_price::numeric, 0) > 0
+              AND COALESCE(normal_price::numeric, 0) > COALESCE(deal_price::numeric, 0)
+          THEN ROUND(
+            ((COALESCE(normal_price::numeric, 0) - COALESCE(deal_price::numeric, 0))
+             / COALESCE(normal_price::numeric, 1)) * 100
+          )
           ELSE NULL
         END AS savings_pct
       FROM deals
       WHERE is_active = true
-        AND deal_price > 0
-        AND normal_price > deal_price
+        AND COALESCE(deal_price::numeric, 0) > 0
     `;
 
     // Only return non-expired deals
@@ -297,7 +301,7 @@ app.get('/api/deals', optionalAuth, async (req, res) => {
         AND (
           typical_expiry_hours IS NULL
           OR found_at IS NULL
-          OR found_at + (typical_expiry_hours * INTERVAL '1 hour') > NOW()
+          OR found_at + (COALESCE(typical_expiry_hours::numeric, 48) * INTERVAL '1 hour') > NOW()
         )
     `;
 
