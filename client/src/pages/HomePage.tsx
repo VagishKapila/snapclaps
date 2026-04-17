@@ -73,19 +73,23 @@ export default function HomePage() {
         <>
           <DealsSection
             title="Domestic flights near you"
-            icon="✈"
+            eyebrow="NEAR YOU"
+            subhead="Updated every 15 minutes — book direct, no middleman"
             deals={domestic}
           />
           <DealsSection
             title="International flights"
-            icon="🌍"
+            eyebrow="WORLDWIDE"
+            subhead="Error fares, flash sales, and sweet spots — gone in hours"
             deals={international}
           />
           <DealsSection
-            title="Hotel deals"
-            icon="🏨"
+            title="Hotels"
+            eyebrow="STAYS"
+            subhead="Top-rated properties at deal prices — instant confirmation"
             deals={hotels}
             countColor={T.hotel}
+            countBg={T.hotelBg}
           />
         </>
       )}

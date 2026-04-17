@@ -43,8 +43,16 @@ function mapToHomepageDeal(d: Record<string, unknown>, index: number): HomepageD
   // meta_line: airline + date if available
   const airline = String(d.airline || 'Multiple Airlines');
   const depDate = String(d.departure_date || '').slice(0, 10);
+  // Hotel: "Paris · 3 nights · Oct 14–17"
+  // Flight: "Airline · 2026-07-04 · RT"
+  const checkIn = d.check_in ? String(d.check_in).slice(0, 10) : '';
+  const checkOut = d.check_out ? String(d.check_out).slice(0, 10) : '';
+  const nightsStr = d.nights ? `${d.nights} nights` : 'Stay';
+  const dateRange = checkIn && checkOut
+    ? ` · ${checkIn.slice(5)} – ${checkOut.slice(5)}`
+    : '';
   const metaLine = isHotel
-    ? `${String(d.hotel_city || getAirportCity(dest))} · ${d.nights ? `${d.nights} nights` : 'Stay'}`
+    ? `${String(d.hotel_city || getAirportCity(dest))} · ${nightsStr}${dateRange}`
     : `${airline}${depDate ? ` · ${depDate}` : ''} · RT`;
 
   const sourceName = String(d.source || d.source_name || 'Aviasales');

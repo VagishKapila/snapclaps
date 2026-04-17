@@ -298,7 +298,8 @@ app.get('/api/deals', optionalAuth, async (req, res) => {
 
     // Free tier sees deals from 2+ hours ago (slightly delayed)
     if (!req.user || req.user.tier === 'free') {
-      query += ` AND created_at < NOW() - INTERVAL '2 hours'`;
+      // 2-hour delay for flight deals on free tier; hotels/evergreen always visible
+      query += ` AND (created_at < NOW() - INTERVAL '2 hours' OR deal_type = 'hotel' OR urgency_type = 'evergreen')`;
     }
 
     // Filter by specific airports list (from ZIP lookup)

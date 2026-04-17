@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { T } from '../theme/tokens';
-import { MILES_HERO_PHOTO } from '../utils/dest-photos';
 
 const CARDS_LIST = [
-  { id: 'chase_sapphire', label: 'Chase Sapphire' },
-  { id: 'amex_gold', label: 'Amex Gold' },
-  { id: 'amex_plat', label: 'Amex Platinum' },
-  { id: 'capital_one', label: 'Capital One Venture' },
-  { id: 'citi_premier', label: 'Citi Premier' },
-  { id: 'bilt', label: 'Bilt' },
-  { id: 'united', label: 'United Explorer' },
-  { id: 'hyatt', label: 'World of Hyatt' },
+  { id: 'chase_sapphire',   label: 'Chase Sapphire' },
+  { id: 'amex_gold',        label: 'Amex Gold' },
+  { id: 'amex_plat',        label: 'Amex Platinum' },
+  { id: 'capital_one',      label: 'Capital One Venture' },
+  { id: 'citi_premier',     label: 'Citi Premier' },
+  { id: 'bilt',             label: 'Bilt' },
+  { id: 'united',           label: 'United Explorer' },
+  { id: 'hyatt',            label: 'World of Hyatt' },
 ];
+
+// Japan proof-card photo (Kyoto / historic streets)
+const JAPAN_PHOTO =
+  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=480&fit=crop&q=85';
 
 export const MilesHeroSection: React.FC = () => {
   const [selectedCards, setSelectedCards] = useState(['chase_sapphire', 'amex_gold']);
@@ -23,139 +26,253 @@ export const MilesHeroSection: React.FC = () => {
   };
 
   return (
-    <div style={{ margin: '16px 24px 24px' }}>
-      {/* Hero image with overlay */}
-      <div style={{
-        borderRadius: 16, overflow: 'hidden', position: 'relative',
-        minHeight: 340,
-        backgroundImage: `url(${MILES_HERO_PHOTO})`,
-        backgroundSize: 'cover', backgroundPosition: 'center',
-      }}>
-        {/* Dark gradient overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)',
-        }} />
+    <section style={{
+      margin: '0 24px 40px',
+      borderRadius: 20,
+      overflow: 'hidden',
+      border: `1px solid ${T.border}`,
+      background: T.card,
+      boxShadow: '0 4px 24px rgba(45,106,79,0.06)',
+    }}>
 
-        {/* Content on top of photo */}
-        <div style={{ position: 'relative', zIndex: 1, padding: '32px 28px' }}>
-          {/* Small badge */}
+      {/* ── Responsive two-column grid ─────────────────────────────────── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0,2fr) minmax(0,3fr)',
+        gap: 0,
+      }}
+        className="miles-hero-grid"
+      >
+        {/* ── LEFT COLUMN — Japan Proof Card ─────────────────────────── */}
+        <div style={{
+          borderRight: `1px solid ${T.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#0a0a0a',
+        }}>
+          {/* Photo */}
           <div style={{
-            display: 'inline-block', fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
-            letterSpacing: 1.2, padding: '4px 10px', borderRadius: 4,
-            background: 'rgba(255,255,255,0.15)', color: '#fff', marginBottom: 16,
-            backdropFilter: 'blur(4px)',
+            height: 240,
+            backgroundImage: `url(${JAPAN_PHOTO})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            position: 'relative',
+            flexShrink: 0,
+          }}>
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%)',
+            }} />
+            {/* LIVE AWARD badge */}
+            <div style={{
+              position: 'absolute', top: 16, left: 16,
+              background: T.primary, color: '#fff',
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase' as const,
+              padding: '3px 8px', borderRadius: 4,
+            }}>
+              Live Award
+            </div>
+          </div>
+
+          {/* Award card body */}
+          <div style={{
+            padding: '20px 20px 24px',
+            background: '#fafaf5',
+            flex: 1,
+            borderTop: `1px solid ${T.border}`,
+          }}>
+            {/* Source line */}
+            <div style={{
+              fontSize: 10, color: T.textMuted,
+              fontFamily: T.fontMono, marginBottom: 10,
+            }}>
+              via Seats.aero · Updated today
+            </div>
+
+            {/* Route */}
+            <div style={{
+              fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 2,
+            }}>
+              SFO → Tokyo Narita
+            </div>
+            <div style={{
+              fontSize: 12, color: T.textSec, marginBottom: 16,
+            }}>
+              ANA Business Class "The Room" · Oct 12–22, 2026
+            </div>
+
+            {/* Miles + Cash */}
+            <div style={{ display: 'flex', gap: 20, marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: T.primary, lineHeight: 1 }}>55K</div>
+                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>miles needed</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: T.text, lineHeight: 1 }}>$86</div>
+                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>total out-of-pocket</div>
+              </div>
+            </div>
+
+            {/* Transfer path */}
+            <div style={{
+              fontSize: 11, color: T.textSec, lineHeight: 1.6,
+              background: T.bgWarm, borderRadius: 8, padding: '10px 12px',
+            }}>
+              Transfer: Amex MR → Virgin Atlantic<br />
+              Book: ANA partner award on virginatlantic.com
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT COLUMN — AI Concierge Pitch ──────────────────────── */}
+        <div style={{ padding: '36px 40px 36px 36px' }}>
+          {/* Eyebrow */}
+          <div style={{
+            fontSize: 12, fontWeight: 500,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.18em',
+            color: T.accent, fontFamily: T.font,
+            marginBottom: 14,
           }}>
             AI Points Concierge
           </div>
 
-          {/* Warm heading */}
-          <h2 style={{
-            fontFamily: T.fontSerif, fontSize: 28, fontWeight: 600,
-            color: '#fff', lineHeight: 1.25, marginBottom: 8, maxWidth: 480,
+          {/* Headline (page H1) */}
+          <h1 style={{
+            fontFamily: T.fontSerif,
+            fontSize: 'clamp(28px, 3.5vw, 56px)',
+            fontWeight: 700,
+            color: '#1B3A2F',
+            lineHeight: 1.1,
+            margin: '0 0 18px',
           }}>
             You already have the points.<br />
             We turn them into the trip.
-          </h2>
+          </h1>
 
+          {/* SEO-rich body copy (verbatim from brief) */}
           <p style={{
-            fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6,
-            marginBottom: 24, maxWidth: 520,
+            fontSize: 17,
+            lineHeight: 1.65,
+            color: '#3A3A3A',
+            fontFamily: T.font,
+            margin: '0 0 28px',
+            maxWidth: 520,
           }}>
-            Your AI concierge finds the smartest ways to use your miles —
-            business class flights, luxury hotels, and more — often for just the cost of taxes.
-            You stay in control. We show you how.
+            Your AI concierge finds the smartest ways to use credit card points
+            and airline miles — business class flights on ANA, Lufthansa, Air France;
+            luxury hotels at Park Hyatt, Andaz, Ritz-Carlton; award sweet spots most
+            travelers never find. We transfer your Amex, Chase, and Capital One points
+            to the right airline partner, show you the exact booking path, and surface
+            the availability in real time. Your points stay in your accounts. You book
+            directly with the airline or hotel. We do the research — you get the trip.
           </p>
 
-          {/* Live award deal overlay */}
+          {/* Card selector label */}
           <div style={{
-            background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)',
-            borderRadius: 12, padding: '18px 22px', maxWidth: 440,
-            border: '1px solid rgba(255,255,255,0.15)',
+            fontSize: 14, fontWeight: 500,
+            color: T.text, fontFamily: T.font,
+            marginBottom: 12,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{
-                fontSize: 9, fontWeight: 600, textTransform: 'uppercase',
-                padding: '2px 6px', borderRadius: 3,
-                background: T.primary, color: '#fff',
-              }}>Live award</span>
-              <span style={{
-                fontSize: 10, color: 'rgba(255,255,255,0.5)',
-                fontFamily: T.fontMono,
-              }}>via Seats.aero · Updated today</span>
-            </div>
-
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
-              SFO → Tokyo Narita
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 14 }}>
-              ANA Business Class "The Room" · Oct 12–22, 2026
-            </div>
-
-            <div style={{ display: 'flex', gap: 20 }}>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>55K</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>miles needed</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>$86</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>total out-of-pocket</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                  Transfer: Amex MR → Virgin Atlantic<br />
-                  Book: ANA partner award on virginatlantic.com
-                </div>
-              </div>
-            </div>
+            Select the cards you have:
           </div>
+
+          {/* 2-row card pill grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, auto)',
+            gap: 8,
+            justifyContent: 'start',
+            marginBottom: 24,
+          }}>
+            {CARDS_LIST.map(card => {
+              const sel = selectedCards.includes(card.id);
+              return (
+                <span
+                  key={card.id}
+                  onClick={() => toggleCard(card.id)}
+                  style={{
+                    display: 'inline-block',
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: sel ? 600 : 400,
+                    cursor: 'pointer',
+                    background: sel ? T.primary : T.bgWarm,
+                    color: sel ? '#fff' : T.primary,
+                    border: `1px solid ${sel ? T.primary : T.border}`,
+                    transition: 'all 0.15s',
+                    fontFamily: T.font,
+                    userSelect: 'none' as const,
+                    whiteSpace: 'nowrap' as const,
+                  }}
+                >
+                  {card.label}
+                </span>
+              );
+            })}
+          </div>
+
+          {/* Primary CTA */}
+          <a
+            href="/plan"
+            style={{
+              display: 'block',
+              textAlign: 'center',
+              padding: '18px 0',
+              borderRadius: 12,
+              background: T.primary,
+              color: '#fff',
+              textDecoration: 'none',
+              fontSize: 18,
+              fontWeight: 600,
+              fontFamily: T.font,
+              transition: 'background 0.15s',
+              letterSpacing: '-0.01em',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = T.primaryDark)}
+            onMouseLeave={e => (e.currentTarget.style.background = T.primary)}
+          >
+            Plan my trip with points →
+          </a>
+
+          {/* Footnote */}
+          <p style={{
+            textAlign: 'center',
+            marginTop: 12,
+            fontSize: 13,
+            color: T.textMuted,
+            lineHeight: 1.5,
+            fontFamily: T.font,
+          }}>
+            Your points stay in your accounts. We show you the steps — you book directly.
+          </p>
         </div>
       </div>
 
-      {/* Card selector BELOW the photo */}
-      <div style={{
-        background: T.bgWarm, borderRadius: '0 0 16px 16px',
-        padding: '20px 24px', marginTop: -8,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: T.text, marginBottom: 10 }}>
-          Select the cards you have — see what trips your points unlock:
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-          {CARDS_LIST.map(card => {
-            const sel = selectedCards.includes(card.id);
-            return (
-              <span
-                key={card.id}
-                onClick={() => toggleCard(card.id)}
-                style={{
-                  padding: '7px 12px', borderRadius: T.radiusSmall,
-                  fontSize: 12, fontWeight: sel ? 600 : 400, cursor: 'pointer',
-                  background: sel ? T.primary : '#fff', color: sel ? '#fff' : T.textSec,
-                  border: `1px solid ${sel ? T.primary : T.borderHover}`,
-                  transition: 'all 0.15s', fontFamily: T.font,
-                }}
-              >
-                {card.label}
-              </span>
-            );
-          })}
-        </div>
-
-        <a
-          href="/plan"
-          style={{
-            display: 'block', textAlign: 'center', padding: 12, borderRadius: 10,
-            background: T.primary, color: '#fff', textDecoration: 'none',
-            fontSize: 14, fontWeight: 600, fontFamily: T.font,
-          }}
-        >
-          Plan my trip with points →
-        </a>
-
-        <p style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: T.textMuted, lineHeight: 1.5 }}>
-          Your points stay in your accounts. We show you the steps — you book directly.
-        </p>
-      </div>
-    </div>
+      {/* ── Mobile responsive overrides ─────────────────────────────────── */}
+      <style>{`
+        @media (max-width: 768px) {
+          .miles-hero-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .miles-hero-grid > div:first-child {
+            border-right: none !important;
+            border-bottom: 1px solid ${T.border};
+            order: 2;
+          }
+          .miles-hero-grid > div:last-child {
+            order: 1;
+            padding: 28px 24px 24px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .miles-hero-grid > div:last-child {
+            padding: 24px 20px 20px !important;
+          }
+        }
+      `}</style>
+    </section>
   );
 };

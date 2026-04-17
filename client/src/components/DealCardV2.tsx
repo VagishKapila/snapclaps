@@ -24,6 +24,7 @@ export interface HomepageDeal {
 
 interface DealCardV2Props {
   deal: HomepageDeal;
+  photoUrl?: string;  // pre-computed by DealsSection (anti-duplicate)
 }
 
 const badgeStyles: Record<string, { background: string; color: string }> = {
@@ -32,9 +33,10 @@ const badgeStyles: Record<string, { background: string; color: string }> = {
   hotel: { background: T.hotelBg, color: T.hotel },
 };
 
-export const DealCardV2: React.FC<DealCardV2Props> = ({ deal }) => {
+export const DealCardV2: React.FC<DealCardV2Props> = ({ deal, photoUrl: photoProp }) => {
   const isHotel = deal.deal_type === 'hotel';
-  const photoUrl = getDestPhoto(deal.destination_airport);
+  // Use parent-assigned URL (anti-dup) if provided, otherwise fall back
+  const photoUrl = photoProp ?? getDestPhoto(deal.destination_airport);
   const badge = badgeStyles[deal.badge_type] || badgeStyles.deal;
   const savingsPct = deal.original_price > 0
     ? Math.round(((deal.original_price - deal.price) / deal.original_price) * 100)
