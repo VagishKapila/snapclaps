@@ -1,4 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { T } from '../theme/tokens';
 
 const NAV_LINKS = [
   { label: 'Plan a Trip', path: '/plan', highlight: true },
@@ -10,39 +12,126 @@ const NAV_LINKS = [
 
 export default function Nav() {
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleNav = (path: string, external?: boolean) => {
-    if (external) {
-      window.location.href = path;
-    } else {
-      navigate(path);
-    }
+    if (external) { window.location.href = path; }
+    else { navigate(path); }
   };
 
   return (
-    <nav style={{ background: 'rgba(249,247,244,0.96)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(15,13,46,0.07)', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <Link to="/" style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, textTransform: 'uppercase', color: '#0f0d2e', textDecoration: 'none', letterSpacing: '0.02em', flexShrink: 0 }}>
-          Snap<span style={{ color: '#00C9A7' }}>.</span>Claps
-        </Link>
+    <nav style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 24px', borderBottom: `1px solid ${T.border}`, background: T.bg,
+      position: 'sticky', top: 0, zIndex: 100,
+    }}>
+      {/* Logo */}
+      <button
+        onClick={() => navigate('/')}
+        style={{
+          fontWeight: 700, fontSize: 17, letterSpacing: -0.5, color: T.text,
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          fontFamily: T.font,
+        }}
+      >
+        snap<span style={{ color: T.primary }}>.</span>claps
+      </button>
 
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {NAV_LINKS.map(({ label, path, external, highlight }) => (
-            <button key={label} onClick={() => handleNav(path, external)} style={{
-              background: 'none', border: 'none', fontSize: 13, fontWeight: highlight ? 700 : 500,
-              color: highlight ? '#00C9A7' : 'rgba(15,13,46,0.55)', cursor: 'pointer', padding: '6px 12px',
-              borderRadius: 8, transition: 'all 0.15s', fontFamily: "'Inter', sans-serif",
+      {/* Center nav */}
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 12, color: T.textSec }}>
+        {NAV_LINKS.map(({ label, path, external, highlight }) => (
+          <button
+            key={label}
+            onClick={() => handleNav(path, external)}
+            style={{
+              background: 'none', border: 'none', fontSize: 12,
+              fontWeight: highlight ? 700 : 400,
+              color: highlight ? T.primary : T.textSec,
+              cursor: 'pointer', padding: '6px 10px',
+              borderRadius: T.radiusSmall, transition: 'all 0.15s',
+              fontFamily: T.font,
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,13,46,0.05)'; (e.currentTarget as HTMLElement).style.color = highlight ? '#00C9A7' : '#0f0d2e'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = highlight ? '#00C9A7' : 'rgba(15,13,46,0.55)'; }}
-            >{label}</button>
-          ))}
-        </div>
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.background = T.primaryLight;
+              (e.currentTarget as HTMLElement).style.color = T.primary;
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.background = '';
+              (e.currentTarget as HTMLElement).style.color = highlight ? T.primary : T.textSec;
+            }}
+          >
+            {label}
+          </button>
+        ))}
+        {isAuthenticated && (
+          <button
+            onClick={() => navigate('/wallet')}
+            style={{
+              background: 'none', border: 'none', fontSize: 12, fontWeight: 600,
+              color: T.primary, cursor: 'pointer', padding: '6px 10px',
+              borderRadius: T.radiusSmall, transition: 'all 0.15s', fontFamily: T.font,
+            }}
+          >
+            💎 My Wallet
+          </button>
+        )}
+      </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-          <a href="/login" style={{ fontSize: 13, fontWeight: 600, color: 'rgba(15,13,46,0.6)', textDecoration: 'none', padding: '8px 14px', borderRadius: 10, border: '1.5px solid rgba(15,13,46,0.12)', transition: 'all 0.15s' }}>Log In</a>
-          <a href="/api/upgrade/premium" style={{ background: '#0f0d2e', color: 'white', fontWeight: 700, fontSize: 13, padding: '8px 18px', borderRadius: 10, textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>Get Premium →</a>
-        </div>
+      {/* Right — auth state */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        {isAuthenticated ? (
+          <>
+            <button
+              onClick={() => navigate('/wallet')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: T.primaryLight, border: 'none',
+                borderRadius: 100, padding: '6px 12px', cursor: 'pointer',
+              }}
+            >
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%',
+                background: T.primary,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, color: 'white',
+              }}>
+                {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || '?'}
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.primary }}>
+                {user?.name || user?.email?.split('@')[0]}
+              </span>
+            </button>
+            <button
+              onClick={logout}
+              style={{
+                fontSize: 12, color: T.textMuted, background: 'none', border: 'none',
+                cursor: 'pointer', padding: '6px 10px', borderRadius: T.radiusSmall,
+                fontFamily: T.font,
+              }}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <a
+              href="/login"
+              style={{ fontSize: 12, color: T.textSec, textDecoration: 'none', fontFamily: T.font }}
+            >
+              Log in
+            </a>
+            <button
+              onClick={() => navigate('/pricing')}
+              style={{
+                background: T.primary, color: '#fff', border: 'none', padding: '8px 16px',
+                borderRadius: T.radiusSmall, fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', fontFamily: T.font,
+              }}
+            >
+              Get Premium →
+            </button>
+          </>
+        )}
       </div>
     </nav>
   );

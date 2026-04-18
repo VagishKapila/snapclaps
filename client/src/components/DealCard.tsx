@@ -1,4 +1,6 @@
+import React from 'react';
 import type { Deal } from '../types';
+import { CountdownTimer } from './CountdownTimer';
 
 const TYPE_COLOR: Record<string, string> = {
   error_fare: '#FF6B6B',
@@ -18,17 +20,22 @@ const TYPE_BG: Record<string, string> = {
   hotel: 'rgba(14,165,233,0.08)',
 };
 
-function openLink(url: string) {
-  if (url && url !== '#') window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-export function DealCard({ type, badge, route, emoji, price, priceLabel, savings, detail, bookUrl, ctaText, isLive, liveStatus, isTealCta }: Deal) {
+export function DealCard({ type, badge, route, emoji, price, priceLabel, savings, detail, bookUrl, ctaText, isLive, liveStatus, isTealCta, expiresAt }: Deal) {
   const accent = TYPE_COLOR[type] || '#00C9A7';
   const bg = TYPE_BG[type] || 'rgba(0,201,167,0.06)';
 
+  // Option 1: direct link — open affiliate URL in new tab, skip /deal/:id middleman
+  const handleCardClick = () => {
+    if (bookUrl && bookUrl !== '#') window.open(bookUrl, '_blank', 'noopener,noreferrer');
+  };
+  const handleCtaClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (bookUrl && bookUrl !== '#') window.open(bookUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div
-      onClick={() => openLink(bookUrl)}
+      onClick={handleCardClick}
       style={{
         minWidth: 240, width: 240,
         background: 'white',
@@ -104,15 +111,22 @@ export function DealCard({ type, badge, route, emoji, price, priceLabel, savings
 
         {/* Single-line detail */}
         <div style={{
-          fontSize: 11, color: 'rgba(15,13,46,0.45)', marginTop: 5, marginBottom: 12,
+          fontSize: 11, color: 'rgba(15,13,46,0.45)', marginTop: 5, marginBottom: 8,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {detail.split('\n')[0]}
         </div>
 
+        {/* Countdown timer — only shows for timed deals */}
+        {expiresAt && (
+          <div style={{ marginLeft: -14, marginRight: -14, marginBottom: 8 }}>
+            <CountdownTimer expiresAt={expiresAt} compact={false} />
+          </div>
+        )}
+
         {/* CTA */}
         <button
-          onClick={e => { e.stopPropagation(); openLink(bookUrl); }}
+          onClick={handleCtaClick}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: isTealCta ? '#00C9A7' : '#0f0d2e',

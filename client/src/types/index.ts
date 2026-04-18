@@ -15,6 +15,15 @@ export interface Deal {
   liveStatus?: 'live' | 'unconfirmed' | 'expired';
   foundMinutesAgo?: number;
   isTealCta?: boolean;
+  expiresAt?: string | null;         // ISO timestamp — for countdown timer
+  typicalExpiryHours?: number | null; // expected lifetime in hours
+  source?: string;                    // travelpayouts_v3 | kiwi | hotellook | manual
+  hotelName?: string;
+  hotelStars?: number;
+  hotelCity?: string;
+  nights?: number;
+  checkIn?: string;
+  checkOut?: string;
 }
 
 export interface User {
