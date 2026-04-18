@@ -275,12 +275,26 @@ router.get('/destinations', async (req, res) => {
 // Exposes safe public config values to the frontend (no secrets).
 // STRIPE_MODE: 'test' | 'live' — controls test-mode banner in UI.
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/config', (req, res) => {
-  res.json({
-    stripe_mode: process.env.STRIPE_MODE || 'live',
-    monthly_price_cents: 999,
-    onetime_price_cents: 9900,
-  });
+router.get('/config', async (req, res) => {
+  try {
+    // Fetch actual price amounts from Stripe so UI always reflects real pricing
+    const [monthlyPrice, onetimePrice] = await Promise.all([
+      STRIPE_MONTHLY_PRICE_ID ? stripe.prices.retrieve(STRIPE_MONTHLY_PRICE_ID) : null,
+      STRIPE_ONETIME_PRICE_ID ? stripe.prices.retrieve(STRIPE_ONETIME_PRICE_ID) : null,
+    ]);
+    res.json({
+      stripe_mode: process.env.STRIPE_MODE || 'live',
+      monthly_price_cents: monthlyPrice?.unit_amount ?? 999,
+      onetime_price_cents: onetimePrice?.unit_amount ?? 9900,
+    });
+  } catch (err) {
+    // Fallback to env-configured defaults
+    res.json({
+      stripe_mode: process.env.STRIPE_MODE || 'live',
+      monthly_price_cents: parseInt(process.env.STRIPE_MONTHLY_PRICE_CENTS || '999'),
+      onetime_price_cents: parseInt(process.env.STRIPE_ONETIME_PRICE_CENTS || '9900'),
+    });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
