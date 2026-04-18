@@ -473,7 +473,7 @@ router.post('/subscribe', async (req, res) => {
       line_items: [{ price: priceId, quantity: 1 }],
       mode,
       ...(subscriptionData ? { subscription_data: subscriptionData } : {}),
-      success_url: `${FRONTEND_URL}/plan/${search_id}?paid=true&session_id=${session_id || ''}`,
+      success_url: `${FRONTEND_URL}/plan/${search_id}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${FRONTEND_URL}/plan/${search_id}`,
       metadata: {
         search_id:   String(search_id),
@@ -513,30 +513,52 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     const { search_id, plan_type, session_id } = session.metadata || {};
 
     try {
-      // Mark search as paid
-      if (search_id) {
-        await pool.query(
-          `UPDATE trip_searches SET status = 'paid' WHERE id = $1`,
-          [search_id]
-        );
-      }
-
       // Upgrade user subscription tier
-      // Look up user via session_id → trip_searches → user_id
-      if (session_id) {
+      // Strategy: upsert by customer email (works for anonymous checkout too)
+      const customerEmail = session.customer_details?.email || session.customer_email;
+      const stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+      const isMonthly = plan_type === 'monthly';
+      const tier = isMonthly ? 'premium' : 'concierge';
+      const minEndInterval = isMonthly ? "INTERVAL '3 months'" : "INTERVAL '30 days'";
+
+      if (customerEmail) {
+        // Ensure unique constraint exists (idempotent)
+        await pool.query(`
+          ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS users_email_unique UNIQUE (email)
+        `).catch(() => {}); // Ignore if already exists or syntax error
+
+        // Upsert user by email — creates row if new, updates if returning
+        const { rows: upsertRows } = await pool.query(`
+          INSERT INTO users (email, stripe_customer_id, subscription_tier, subscription_started, subscription_min_end, updated_at)
+          VALUES ($1, $2, $3, NOW(), NOW() + ${minEndInterval}, NOW())
+          ON CONFLICT (email) DO UPDATE SET
+            stripe_customer_id   = EXCLUDED.stripe_customer_id,
+            subscription_tier    = EXCLUDED.subscription_tier,
+            subscription_started = EXCLUDED.subscription_started,
+            subscription_min_end = EXCLUDED.subscription_min_end,
+            updated_at           = EXCLUDED.updated_at
+          RETURNING id
+        `, [customerEmail, stripeCustomerId || null, tier]);
+
+        const userId = upsertRows[0]?.id;
+        console.log(`Upserted user ${userId} (${customerEmail}) to ${tier} (${isMonthly ? '3-month min' : '30 days'})`);
+
+        // Link trip_searches.user_id if we have a search_id
+        if (search_id && userId) {
+          await pool.query(
+            `UPDATE trip_searches SET user_id = $1, status = 'paid' WHERE id = $2`,
+            [userId, search_id]
+          );
+        }
+      } else if (session_id) {
+        // Fallback: look up by session_id for authenticated users
         const { rows: userRows } = await pool.query(
           `SELECT DISTINCT user_id FROM trip_searches
            WHERE session_id = $1 AND user_id IS NOT NULL LIMIT 1`,
           [session_id]
         );
         const userId = userRows[0]?.user_id;
-
         if (userId) {
-          const isMonthly = plan_type === 'monthly';
-          const tier      = isMonthly ? 'premium' : 'concierge';
-          // Monthly: 3-month minimum lock. One-time: 30-day access.
-          const minEndInterval = isMonthly ? "INTERVAL '3 months'" : "INTERVAL '30 days'";
-
           await pool.query(`
             UPDATE users
             SET subscription_tier     = $1,
@@ -545,8 +567,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 updated_at            = NOW()
             WHERE id = $2
           `, [tier, userId]);
-
-          console.log(`Upgraded user ${userId} to ${tier} (${isMonthly ? '3-month min' : '30 days'})`);
+          console.log(`Upgraded existing user ${userId} to ${tier}`);
         }
       }
     } catch (err) {

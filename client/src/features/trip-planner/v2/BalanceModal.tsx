@@ -77,28 +77,40 @@ export default function BalanceModal({ card, initialBalance = 0, onSave, onClose
           />
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {[25000, 50000, 75000, 100000].map(v => (
-            <button
-              key={v}
-              onClick={() => setValue(v.toLocaleString())}
-              style={{
-                flex: 1,
-                padding: '8px 4px',
-                borderRadius: radius.md,
-                border: `1.5px solid ${value === v.toLocaleString() ? colors.emerald : colors.gray200}`,
-                background: value === v.toLocaleString() ? colors.emeraldFaint : colors.white,
-                fontFamily: fonts.body,
-                fontSize: 12,
-                fontWeight: 600,
-                color: value === v.toLocaleString() ? colors.emerald : colors.gray600,
-                cursor: 'pointer',
-              }}
-            >
-              {v >= 1000 ? `${v / 1000}K` : v}
-            </button>
-          ))}
-        </div>
+        {card.welcome_bonus > 0 && (
+          <button
+            onClick={() => setValue(card.welcome_bonus.toLocaleString())}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '14px 16px',
+              borderRadius: radius.md,
+              border: `1.5px solid ${value === card.welcome_bonus.toLocaleString() ? colors.emerald : colors.gray200}`,
+              background: value === card.welcome_bonus.toLocaleString() ? colors.emeraldFaint : colors.white,
+              cursor: 'pointer',
+              marginBottom: 16,
+              textAlign: 'left',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <div>
+              <div style={{ fontFamily: fonts.body, fontSize: 13, fontWeight: 700, color: value === card.welcome_bonus.toLocaleString() ? colors.emerald : colors.warmBlack }}>
+                Estimate for me
+              </div>
+              <div style={{ fontFamily: fonts.body, fontSize: 11, color: colors.gray400, marginTop: 2 }}>
+                Typical welcome bonus: {card.welcome_bonus.toLocaleString()} pts
+              </div>
+            </div>
+            {value === card.welcome_bonus.toLocaleString() && (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="7" fill="#0a5c46"/>
+                <path d="M5 8L7 10L11 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
+        )}
 
         <button
           onClick={handleSave}

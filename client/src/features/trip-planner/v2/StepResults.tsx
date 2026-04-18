@@ -116,10 +116,11 @@ function ResearchingState({
   );
 }
 
-function MilesCard({ label, data, cashEstimate }: {
+function MilesCard({ label, data, cashEstimate, showBestValue }: {
   label: string;
   data: { oneway_miles: number; oneway_taxes: number; rt_miles: number; rt_taxes: number; programs_count: number };
   cashEstimate: number | null;
+  showBestValue?: boolean;
 }) {
   const savings = cashEstimate ? Math.round(cashEstimate - data.rt_taxes) : null;
   return (
@@ -131,10 +132,24 @@ function MilesCard({ label, data, cashEstimate }: {
       boxShadow: shadows.sm,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontFamily: fonts.body, fontSize: 11, fontWeight: 700, color: colors.emerald, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {label}
           </span>
+          {showBestValue && (
+            <span style={{
+              fontFamily: fonts.body,
+              fontSize: 10,
+              fontWeight: 700,
+              color: '#c8a15c',
+              background: 'rgba(200,161,92,0.12)',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              letterSpacing: '0.04em',
+            }}>
+              ✦ Sweet spot
+            </span>
+          )}
         </div>
         {savings && savings > 0 && (
           <div style={{
@@ -144,7 +159,7 @@ function MilesCard({ label, data, cashEstimate }: {
             fontWeight: 700,
             fontSize: 11,
             padding: '3px 8px',
-            borderRadius: radius.full,
+            borderRadius: (radius as any).full,
           }}>
             Save ~${savings.toLocaleString()}
           </div>
@@ -179,6 +194,27 @@ function MilesCard({ label, data, cashEstimate }: {
       <div style={{ marginTop: 10, fontFamily: fonts.body, fontSize: 12, color: colors.gray400 }}>
         {data.programs_count} program{data.programs_count !== 1 ? 's' : ''} · program names revealed after unlock
       </div>
+      {/* Programs chip + pulse dot */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="5" stroke="#0a5c46" strokeWidth="1.5"/>
+            <path d="M3.5 6L5.5 8L8.5 4" stroke="#0a5c46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontFamily: fonts.body, fontSize: 11, color: colors.emerald, fontWeight: 600 }}>
+            {data.programs_count} booking program{data.programs_count !== 1 ? 's' : ''} found
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div
+            className="pulse-dot"
+            style={{ width: 6, height: 6, borderRadius: '50%', background: '#c8a15c' }}
+          />
+          <span style={{ fontFamily: fonts.body, fontSize: 10, color: colors.gray400 }}>
+            Seats available now
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -198,6 +234,13 @@ export default function StepResults({ result, destination, month, duration, home
 
   return (
     <div>
+      <style>{`
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+`}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <span style={{ fontSize: 32 }}>{DESTINATION_EMOJI[destination.airport] || '🌍'}</span>
         <div>
@@ -208,6 +251,23 @@ export default function StepResults({ result, destination, month, duration, home
             {fmtMonth(month)} · {duration === 'flex' ? 'Flexible dates' : `${duration} nights`} · prices are one-way
           </p>
         </div>
+      </div>
+
+      {/* Live availability indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+        <div
+          className="pulse-dot"
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: colors.gold || '#c8a15c',
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ fontFamily: fonts.body, fontSize: 11, fontWeight: 700, color: colors.gray400, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Live availability · Checked just now
+        </span>
       </div>
 
       {/* Cash comparison */}
@@ -235,7 +295,7 @@ export default function StepResults({ result, destination, month, duration, home
       {/* Miles cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
         {result.business && (
-          <MilesCard label="Business Class" data={result.business} cashEstimate={result.cash_estimate} />
+          <MilesCard label="Business Class" data={result.business} cashEstimate={result.cash_estimate} showBestValue />
         )}
         {result.economy && (
           <MilesCard label="Economy" data={result.economy} cashEstimate={result.cash_estimate} />

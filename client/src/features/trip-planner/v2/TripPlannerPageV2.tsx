@@ -12,6 +12,7 @@ import StepDestination from './StepDestination';
 import StepResults, { type SearchResult } from './StepResults';
 import StepCards, { type CardBalance } from './StepCards';
 import StepUnlock from './StepUnlock';
+import StepPlan from './StepPlan';
 import ProcessingScreen from './ProcessingScreen';
 import { colors, fonts, radius, shadows } from './styles';
 import type { Destination } from '../data/destinations';
@@ -138,10 +139,16 @@ export default function TripPlannerPageV2() {
     setStep(4);
   }
 
-  // Step 4 → unlock (same step 4, show StepUnlock)
+  // Step 4 → plan → unlock
   const [showUnlock, setShowUnlock] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
   function handleCardsNext(data: { balances: CardBalance[]; no_cards: boolean }) {
     setForm(prev => ({ ...prev, ...data }));
+    setShowPlan(true);
+  }
+
+  function handlePlanNext() {
+    setShowPlan(false);
     setShowUnlock(true);
   }
 
@@ -161,7 +168,7 @@ export default function TripPlannerPageV2() {
     }
   }
 
-  const currentStep: Step = showUnlock ? 4 : step;
+  const currentStep: Step = (showUnlock || showPlan) ? 4 : step;
 
   return (
     <div style={{ minHeight: '100vh', background: colors.cream, paddingTop: 80 }}>
@@ -249,10 +256,23 @@ export default function TripPlannerPageV2() {
             </>
           )}
 
-          {step === 4 && !showUnlock && (
+          {step === 4 && !showPlan && !showUnlock && (
             <StepCards
               onNext={handleCardsNext}
               onBack={() => setStep(3)}
+            />
+          )}
+
+          {step === 4 && showPlan && !showUnlock && searchResult && (
+            <StepPlan
+              result={searchResult}
+              destination={form.destination!}
+              month={form.month}
+              duration={form.duration}
+              balances={form.balances}
+              no_cards={form.no_cards}
+              onNext={handlePlanNext}
+              onBack={() => setShowPlan(false)}
             />
           )}
 
@@ -274,6 +294,24 @@ export default function TripPlannerPageV2() {
               if (step === 3) setStep(2);
               else if (step === 2) setStep(1);
             }}
+            style={{
+              display: 'block',
+              margin: '16px auto 0',
+              background: 'none',
+              border: 'none',
+              fontFamily: fonts.body,
+              fontSize: 13,
+              color: colors.gray400,
+              cursor: 'pointer',
+              padding: '8px 0',
+            }}
+          >
+            ← Back
+          </button>
+        )}
+        {showPlan && !showUnlock && (
+          <button
+            onClick={() => setShowPlan(false)}
             style={{
               display: 'block',
               margin: '16px auto 0',

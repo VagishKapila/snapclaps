@@ -11,6 +11,7 @@ import DealPage from './pages/DealPage';
 import TripPlannerPage from './features/trip-planner/TripPlannerPage';
 import TripResultsPage from './features/trip-planner/TripResultsPage';
 import TripPlannerPageV2 from './features/trip-planner/v2/TripPlannerPageV2';
+import TripConfirmedPage from './features/trip-planner/TripConfirmedPage';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/deal/:id" element={<DealPage />} />
         <Route path="/plan" element={<TripPlannerPageV2 />} />
         <Route path="/plan/:searchId" element={<TripResultsPage />} />
+        <Route path="/plan/:searchId/confirmed" element={<TripConfirmedPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
       <Footer />
