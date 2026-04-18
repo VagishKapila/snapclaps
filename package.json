@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "build": "cd client && npm install && npm run build && cd .. && cp -r dist-react/assets dist/ && cp dist-react/index.html dist/ && cp dist-react/favicon.svg dist/ 2>/dev/null; echo 'React build copied to dist/'",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test:real-user": "node tests/real-user/live-site-check.js",
+    "test:real-user:staging": "ENV=staging node tests/real-user/live-site-check.js",
+    "test:real-user:production": "ENV=production node tests/real-user/live-site-check.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -18,5 +21,8 @@
     "fluent-ffmpeg": "^2.1.3",
     "pg": "^8.11.3",
     "stripe": "^22.0.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
   }
 }

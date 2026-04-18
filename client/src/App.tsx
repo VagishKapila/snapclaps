@@ -10,6 +10,7 @@ import PricingPage from './pages/PricingPage';
 import DealPage from './pages/DealPage';
 import TripPlannerPage from './features/trip-planner/TripPlannerPage';
 import TripResultsPage from './features/trip-planner/TripResultsPage';
+import TripPlannerPageV2 from './features/trip-planner/v2/TripPlannerPageV2';
 
 export default function App() {
   return (
@@ -22,7 +23,7 @@ export default function App() {
         <Route path="/miles-cards" element={<MilesCardsPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/deal/:id" element={<DealPage />} />
-        <Route path="/plan" element={<TripPlannerPage />} />
+        <Route path="/plan" element={<TripPlannerPageV2 />} />
         <Route path="/plan/:searchId" element={<TripResultsPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>

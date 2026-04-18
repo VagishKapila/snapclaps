@@ -210,20 +210,21 @@ router.post('/search', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/plan/destinations
-// Returns all active destination cities + airports for Step 2 autocomplete
-// BEFORE: used SWEET_SPOTS JS array from server/data/sweet-spots.js
-// AFTER:  queries sweet_spots DB table
+// Returns ALL destination cities (active + inactive) with has_active_sweet_spot flag.
+// Used for autocomplete — users should see all 30 destinations even if we don't
+// have a confirmed rate yet. has_active_sweet_spot=false → show "researching" state.
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/destinations', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT DISTINCT
-        destination_city   AS name,
+        destination_city    AS name,
         destination_airport AS airport,
         destination_country AS country,
-        region
+        region,
+        bool_or(is_active)  AS has_active_sweet_spot
       FROM sweet_spots
-      WHERE is_active = true
+      GROUP BY destination_city, destination_airport, destination_country, region
       ORDER BY destination_city
     `);
     res.json({ destinations: rows });
@@ -231,6 +232,19 @@ router.get('/destinations', async (req, res) => {
     console.error('GET /plan/destinations error:', err);
     res.status(500).json({ error: 'Failed to load destinations' });
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/config
+// Exposes safe public config values to the frontend (no secrets).
+// STRIPE_MODE: 'test' | 'live' — controls test-mode banner in UI.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/config', (req, res) => {
+  res.json({
+    stripe_mode: process.env.STRIPE_MODE || 'live',
+    monthly_price_cents: 999,
+    onetime_price_cents: 9900,
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
