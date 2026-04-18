@@ -270,6 +270,33 @@ const US_AIRPORTS_SET = new Set([
 ]);
 
 // --- API: Deals ---
+// 3C — Live deal count (real data, cached 10 min)
+let _dealCountCache = { count: null, ts: 0 };
+app.get('/api/deals/count', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (_dealCountCache.count !== null && now - _dealCountCache.ts < 10 * 60 * 1000) {
+      return res.json({ count: _dealCountCache.count, source: 'travelpayouts:live_deals', cached: true });
+    }
+    const result = await pool.query(`
+      SELECT COUNT(*) AS cnt FROM deals
+      WHERE is_active = true
+        AND COALESCE(deal_price::numeric, 0) > 0
+        AND (expires_at IS NULL OR expires_at > NOW())
+        AND (
+          typical_expiry_hours IS NULL OR found_at IS NULL
+          OR found_at + (COALESCE(typical_expiry_hours, 48) * INTERVAL '1 hour') > NOW()
+        )
+    `);
+    const count = parseInt(result.rows[0]?.cnt ?? '0', 10);
+    _dealCountCache = { count, ts: now };
+    res.json({ count, source: 'travelpayouts:live_deals', cached: false });
+  } catch (err) {
+    console.error('deals/count error:', err.message);
+    res.status(500).json({ error: 'count unavailable' });
+  }
+});
+
 app.get('/api/deals', optionalAuth, async (req, res) => {
   try {
     const { airports, origin, limit = 30, type } = req.query;

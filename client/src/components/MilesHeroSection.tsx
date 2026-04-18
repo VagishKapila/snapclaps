@@ -1,5 +1,12 @@
+/**
+ * 3A — Miles Hero restructure
+ * Desktop: 40/60 two-column (Japan card left, AI pitch right)
+ * Mobile: AI pitch first, Japan card compact below
+ * Added: "LIVE EXAMPLE" label, "How it works" strip, social proof (3C)
+ */
 import React, { useState } from 'react';
 import { T } from '../theme/tokens';
+import { LiveDealCount } from './LiveDealCount';
 
 const CARDS_LIST = [
   { id: 'chase_sapphire',   label: 'Chase Sapphire' },
@@ -15,6 +22,12 @@ const CARDS_LIST = [
 // Japan proof-card photo (Kyoto / historic streets)
 const JAPAN_PHOTO =
   'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=480&fit=crop&q=85';
+
+const HOW_IT_WORKS = [
+  { num: '①', text: 'Tell us your cards' },
+  { num: '②', text: 'We find the sweet spots' },
+  { num: '③', text: 'You book direct, no markup' },
+];
 
 export const MilesHeroSection: React.FC = () => {
   const [selectedCards, setSelectedCards] = useState(['chase_sapphire', 'amex_gold']);
@@ -36,20 +49,41 @@ export const MilesHeroSection: React.FC = () => {
     }}>
 
       {/* ── Responsive two-column grid ─────────────────────────────────── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0,2fr) minmax(0,3fr)',
-        gap: 0,
-      }}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0,2fr) minmax(0,3fr)',
+          gap: 0,
+        }}
         className="miles-hero-grid"
       >
         {/* ── LEFT COLUMN — Japan Proof Card ─────────────────────────── */}
-        <div style={{
-          borderRight: `1px solid ${T.border}`,
-          display: 'flex',
-          flexDirection: 'column',
-          background: '#0a0a0a',
-        }}>
+        <div
+          className="miles-hero-left"
+          style={{
+            borderRight: `1px solid ${T.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#0a0a0a',
+          }}
+        >
+          {/* "LIVE EXAMPLE" label — outside the card, top of column */}
+          <div style={{
+            padding: '12px 16px 8px',
+            background: T.card,
+            borderBottom: `1px solid ${T.border}`,
+          }}>
+            <span style={{
+              fontSize: 9, fontWeight: 700,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.14em',
+              color: T.accent,
+              fontFamily: T.font,
+            }}>
+              ● LIVE EXAMPLE · from your nearest airport
+            </span>
+          </div>
+
           {/* Photo */}
           <div style={{
             height: 240,
@@ -91,14 +125,10 @@ export const MilesHeroSection: React.FC = () => {
             </div>
 
             {/* Route */}
-            <div style={{
-              fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 2,
-            }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 2 }}>
               SFO → Tokyo Narita
             </div>
-            <div style={{
-              fontSize: 12, color: T.textSec, marginBottom: 16,
-            }}>
+            <div style={{ fontSize: 12, color: T.textSec, marginBottom: 16 }}>
               ANA Business Class "The Room" · Oct 12–22, 2026
             </div>
 
@@ -138,7 +168,7 @@ export const MilesHeroSection: React.FC = () => {
             AI Points Concierge
           </div>
 
-          {/* Headline (page H1) */}
+          {/* Page H1 */}
           <h1 style={{
             fontFamily: T.fontSerif,
             fontSize: 'clamp(28px, 3.5vw, 56px)',
@@ -151,23 +181,86 @@ export const MilesHeroSection: React.FC = () => {
             We turn them into the trip.
           </h1>
 
-          {/* SEO-rich body copy (verbatim from brief) */}
+          {/* SEO body copy (verbatim per spec) */}
           <p style={{
             fontSize: 17,
             lineHeight: 1.65,
             color: '#3A3A3A',
             fontFamily: T.font,
-            margin: '0 0 28px',
+            margin: '0 0 24px',
             maxWidth: 520,
           }}>
             Your AI concierge finds the smartest ways to use credit card points
-            and airline miles — business class flights on ANA, Lufthansa, Air France;
-            luxury hotels at Park Hyatt, Andaz, Ritz-Carlton; award sweet spots most
+            and airline miles — business class flights on ANA, Lufthansa, and Air France;
+            luxury hotels at Park Hyatt, Andaz, and Ritz-Carlton; award sweet spots most
             travelers never find. We transfer your Amex, Chase, and Capital One points
-            to the right airline partner, show you the exact booking path, and surface
-            the availability in real time. Your points stay in your accounts. You book
+            to the right airline partner, show you the exact booking path, and surface live
+            award availability in real time. Your points stay in your accounts. You book
             directly with the airline or hotel. We do the research — you get the trip.
           </p>
+
+          {/* ── How it works strip ──────────────────────────────────────── */}
+          <div style={{
+            background: T.bgWarm,
+            borderRadius: 12,
+            padding: '16px 20px',
+            marginBottom: 24,
+          }}>
+            <div style={{
+              fontSize: 11, fontWeight: 500,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.15em',
+              color: T.textMuted,
+              textAlign: 'center' as const,
+              marginBottom: 14,
+              fontFamily: T.font,
+            }}>
+              How it works
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              justifyContent: 'center',
+            }}
+              className="how-it-works-row"
+            >
+              {HOW_IT_WORKS.map(step => (
+                <div
+                  key={step.num}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: T.card,
+                    borderRadius: 8,
+                    padding: '8px 14px',
+                    border: `1px solid ${T.border}`,
+                    flex: 1,
+                  }}
+                >
+                  <span style={{
+                    fontFamily: T.fontSerif,
+                    fontWeight: 600,
+                    fontSize: 20,
+                    color: T.primary,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}>
+                    {step.num}
+                  </span>
+                  <span style={{
+                    fontFamily: T.font,
+                    fontWeight: 500,
+                    fontSize: 13,
+                    color: '#3A3A3A',
+                    lineHeight: 1.3,
+                  }}>
+                    {step.text}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Card selector label */}
           <div style={{
@@ -181,11 +274,12 @@ export const MilesHeroSection: React.FC = () => {
           {/* 2-row card pill grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, auto)',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 8,
-            justifyContent: 'start',
             marginBottom: 24,
-          }}>
+          }}
+            className="card-selector-grid"
+          >
             {CARDS_LIST.map(card => {
               const sel = selectedCards.includes(card.id);
               return (
@@ -194,9 +288,9 @@ export const MilesHeroSection: React.FC = () => {
                   onClick={() => toggleCard(card.id)}
                   style={{
                     display: 'inline-block',
-                    padding: '8px 14px',
+                    padding: '8px 10px',
                     borderRadius: 8,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: sel ? 600 : 400,
                     cursor: 'pointer',
                     background: sel ? T.primary : T.bgWarm,
@@ -205,7 +299,7 @@ export const MilesHeroSection: React.FC = () => {
                     transition: 'all 0.15s',
                     fontFamily: T.font,
                     userSelect: 'none' as const,
-                    whiteSpace: 'nowrap' as const,
+                    textAlign: 'center' as const,
                   }}
                 >
                   {card.label}
@@ -241,13 +335,17 @@ export const MilesHeroSection: React.FC = () => {
           <p style={{
             textAlign: 'center',
             marginTop: 12,
+            marginBottom: 0,
             fontSize: 13,
             color: T.textMuted,
             lineHeight: 1.5,
             fontFamily: T.font,
           }}>
-            Your points stay in your accounts. We show you the steps — you book directly.
+            Your points stay in your accounts. You book directly.
           </p>
+
+          {/* 3C — Real-data social proof counter */}
+          <LiveDealCount />
         </div>
       </div>
 
@@ -257,18 +355,24 @@ export const MilesHeroSection: React.FC = () => {
           .miles-hero-grid {
             grid-template-columns: 1fr !important;
           }
-          .miles-hero-grid > div:first-child {
+          .miles-hero-left {
             border-right: none !important;
-            border-bottom: 1px solid ${T.border};
+            border-top: 1px solid ${T.border};
             order: 2;
           }
-          .miles-hero-grid > div:last-child {
+          .miles-hero-grid > div:nth-child(2) {
             order: 1;
             padding: 28px 24px 24px !important;
           }
+          .how-it-works-row {
+            flex-direction: column !important;
+          }
+          .card-selector-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
         }
         @media (max-width: 480px) {
-          .miles-hero-grid > div:last-child {
+          .miles-hero-grid > div:nth-child(2) {
             padding: 24px 20px 20px !important;
           }
         }
