@@ -98,12 +98,12 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({ onLocationSet, hasLocati
 
   return (
     <div style={{ padding: '40px 24px 28px', textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-      <h1 style={{
+      <h2 style={{
         fontFamily: T.fontSerif, fontSize: 30, fontWeight: 600,
         lineHeight: 1.25, color: T.text, marginBottom: 10,
       }}>
         Find deals from airports near you
-      </h1>
+      </h2>
       <p style={{ fontSize: 14, color: T.textSec, lineHeight: 1.6, marginBottom: 22 }}>
         We scan hundreds of routes every 15 minutes.<br />
         Enter your city or ZIP and see what's cheap right now.
