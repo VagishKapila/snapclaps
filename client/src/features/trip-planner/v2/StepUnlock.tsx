@@ -13,6 +13,7 @@ export default function StepUnlock({ searchId, stripeMode, monthlyPriceCents, on
   const [loading, setLoading] = useState<'monthly' | 'onetime' | null>(null);
   const [error, setError] = useState('');
   const isTest = stripeMode === 'test';
+  const isLive = stripeMode === 'live';
 
   async function handleClick(plan: 'monthly' | 'onetime') {
     setLoading(plan);
@@ -25,8 +26,8 @@ export default function StepUnlock({ searchId, stripeMode, monthlyPriceCents, on
     }
   }
 
-  const monthlyPrice = isTest ? '$1/month' : `$${(monthlyPriceCents / 100).toFixed(2)}/month`;
-  const onetimePrice = isTest ? '$1' : `$${(onetimePriceCents / 100).toFixed(0)}`;
+  const monthlyPrice = `$${(monthlyPriceCents / 100).toFixed(2)}/month`;
+  const onetimePrice = `$${(onetimePriceCents / 100).toFixed(0)}`;
 
   return (
     <div>
@@ -66,7 +67,7 @@ export default function StepUnlock({ searchId, stripeMode, monthlyPriceCents, on
           </div>
 
           <div style={{ marginBottom: 4 }}>
-            {isTest && (
+            {(isTest || isLive) && (
               <span style={{
                 display: 'inline-block',
                 fontFamily: fonts.body,
@@ -79,7 +80,7 @@ export default function StepUnlock({ searchId, stripeMode, monthlyPriceCents, on
                 marginBottom: 6,
                 border: `1px solid ${colors.emerald}`,
               }}>
-                Test mode
+                {isLive ? 'Launch pricing' : 'Test mode'}
               </span>
             )}
           </div>
@@ -143,7 +144,7 @@ export default function StepUnlock({ searchId, stripeMode, monthlyPriceCents, on
           overflow: 'hidden',
         }}>
           <div style={{ marginBottom: 4 }}>
-            {isTest && (
+            {(isTest || isLive) && (
               <span style={{
                 display: 'inline-block',
                 fontFamily: fonts.body,
@@ -156,7 +157,7 @@ export default function StepUnlock({ searchId, stripeMode, monthlyPriceCents, on
                 marginBottom: 6,
                 border: `1px solid ${colors.emerald}`,
               }}>
-                Test mode
+                {isLive ? 'Launch pricing' : 'Test mode'}
               </span>
             )}
           </div>
