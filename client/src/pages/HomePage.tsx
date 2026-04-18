@@ -4,6 +4,8 @@ import { LocationBar } from '../components/LocationBar';
 import { HeroSearch } from '../components/HeroSearch';
 import { MilesHeroSection } from '../components/MilesHeroSection';
 import { DealsSection } from '../components/DealsSection';
+import { ExperiencesSection } from '../components/ExperiencesSection';
+import { CarsSection } from '../components/CarsSection';
 import { useHomepageDeals } from '../hooks/useHomepageDeals';
 import type { ZipLocation } from '../utils/zip-airports';
 
@@ -32,6 +34,12 @@ export default function HomePage() {
   const { domestic, international, hotels, loading } = useHomepageDeals(
     location ? location.airports : null
   );
+
+  // Active destination IATAs for experiences filtering
+  const activeDestinations = [
+    ...domestic.map(d => d.destination_airport),
+    ...international.map(d => d.destination_airport),
+  ].filter(Boolean);
 
   return (
     <div style={{ background: T.bg, minHeight: '100vh', fontFamily: T.font }}>
@@ -73,24 +81,28 @@ export default function HomePage() {
         <>
           <DealsSection
             title="Domestic flights near you"
-            eyebrow="NEAR YOU"
             subhead="Updated every 15 minutes — book direct, no middleman"
             deals={domestic}
+            themeKey="domestic"
           />
           <DealsSection
             title="International flights"
-            eyebrow="WORLDWIDE"
             subhead="Error fares, flash sales, and sweet spots — gone in hours"
             deals={international}
+            themeKey="international"
           />
           <DealsSection
             title="Hotels"
-            eyebrow="STAYS"
             subhead="Top-rated properties at deal prices — instant confirmation"
             deals={hotels}
-            countColor={T.hotel}
-            countBg={T.hotelBg}
+            themeKey="hotels"
           />
+          {/* 2D — Experiences via Klook */}
+          <ExperiencesSection
+            activeDestinations={activeDestinations.length > 0 ? activeDestinations : null}
+          />
+          {/* 2E — Cars coming soon */}
+          <CarsSection />
         </>
       )}
     </div>

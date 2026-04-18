@@ -24,20 +24,20 @@ export interface HomepageDeal {
 
 interface DealCardV2Props {
   deal: HomepageDeal;
-  photoUrl?: string;  // pre-computed by DealsSection (anti-duplicate)
+  photoUrl?: string;      // pre-computed by DealsSection (anti-duplicate)
+  badgeBg?: string;       // section theme badge background (2B)
+  badgeText?: string;     // section theme badge text color (2B)
 }
 
-const badgeStyles: Record<string, { background: string; color: string }> = {
-  error: { background: T.errorBg, color: T.error },
-  deal: { background: T.primaryLight, color: T.primary },
-  hotel: { background: T.hotelBg, color: T.hotel },
-};
-
-export const DealCardV2: React.FC<DealCardV2Props> = ({ deal, photoUrl: photoProp }) => {
+export const DealCardV2: React.FC<DealCardV2Props> = ({ deal, photoUrl: photoProp, badgeBg, badgeText }) => {
   const isHotel = deal.deal_type === 'hotel';
   // Use parent-assigned URL (anti-dup) if provided, otherwise fall back
   const photoUrl = photoProp ?? getDestPhoto(deal.destination_airport);
-  const badge = badgeStyles[deal.badge_type] || badgeStyles.deal;
+  // Badge: section theme colors override deal-type defaults
+  const badge = {
+    background: badgeBg ?? (deal.badge_type === 'error' ? T.errorBg : deal.badge_type === 'hotel' ? T.hotelBg : T.primaryLight),
+    color: badgeText ?? (deal.badge_type === 'error' ? T.error : deal.badge_type === 'hotel' ? T.hotel : T.primary),
+  };
   const savingsPct = deal.original_price > 0
     ? Math.round(((deal.original_price - deal.price) / deal.original_price) * 100)
     : null;

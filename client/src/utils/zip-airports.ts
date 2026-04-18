@@ -80,3 +80,93 @@ export function lookupZip(zip: string): ZipLocation | null {
   const p2 = zip.substring(0, 2);
   return ZIP_AIRPORTS[p3] || ZIP_AIRPORTS[p2] || null;
 }
+
+// ── City-name lookup (2F) ────────────────────────────────────────────────────
+// Keys are lowercase. Aliases → canonical ZipLocation.
+const CITY_NAMES: Record<string, ZipLocation> = {
+  'new york':        { city: 'New York, NY',        airports: ['JFK', 'EWR', 'LGA'] },
+  'nyc':             { city: 'New York, NY',        airports: ['JFK', 'EWR', 'LGA'] },
+  'brooklyn':        { city: 'New York, NY',        airports: ['JFK', 'LGA', 'EWR'] },
+  'bronx':           { city: 'New York, NY',        airports: ['LGA', 'JFK', 'EWR'] },
+  'queens':          { city: 'New York, NY',        airports: ['JFK', 'LGA', 'EWR'] },
+  'manhattan':       { city: 'New York, NY',        airports: ['JFK', 'EWR', 'LGA'] },
+  'san francisco':   { city: 'San Francisco, CA',   airports: ['SFO', 'OAK', 'SJC'] },
+  'sf':              { city: 'San Francisco, CA',   airports: ['SFO', 'OAK', 'SJC'] },
+  'bay area':        { city: 'San Francisco, CA',   airports: ['SFO', 'OAK', 'SJC'] },
+  'oakland':         { city: 'San Francisco, CA',   airports: ['OAK', 'SFO', 'SJC'] },
+  'san jose':        { city: 'San Jose, CA',        airports: ['SJC', 'SFO', 'OAK'] },
+  'san diego':       { city: 'San Diego, CA',       airports: ['SAN'] },
+  'los angeles':     { city: 'Los Angeles, CA',     airports: ['LAX', 'BUR', 'SNA'] },
+  'la':              { city: 'Los Angeles, CA',     airports: ['LAX', 'BUR', 'SNA'] },
+  'lax':             { city: 'Los Angeles, CA',     airports: ['LAX', 'BUR', 'SNA'] },
+  'burbank':         { city: 'Burbank, CA',         airports: ['BUR', 'LAX'] },
+  'orange county':   { city: 'Orange County, CA',   airports: ['SNA', 'LAX'] },
+  'sacramento':      { city: 'Sacramento, CA',      airports: ['SMF', 'OAK', 'SFO'] },
+  'chicago':         { city: 'Chicago, IL',         airports: ['ORD', 'MDW'] },
+  'miami':           { city: 'Miami, FL',           airports: ['MIA', 'FLL'] },
+  'fort lauderdale': { city: 'Fort Lauderdale, FL', airports: ['FLL', 'MIA'] },
+  'ft lauderdale':   { city: 'Fort Lauderdale, FL', airports: ['FLL', 'MIA'] },
+  'orlando':         { city: 'Orlando, FL',         airports: ['MCO'] },
+  'tampa':           { city: 'Tampa, FL',           airports: ['TPA', 'MCO'] },
+  'atlanta':         { city: 'Atlanta, GA',         airports: ['ATL'] },
+  'dallas':          { city: 'Dallas, TX',          airports: ['DFW', 'DAL'] },
+  'houston':         { city: 'Houston, TX',         airports: ['IAH', 'HOU'] },
+  'austin':          { city: 'Austin, TX',          airports: ['AUS'] },
+  'seattle':         { city: 'Seattle, WA',         airports: ['SEA'] },
+  'boston':          { city: 'Boston, MA',          airports: ['BOS'] },
+  'denver':          { city: 'Denver, CO',          airports: ['DEN'] },
+  'las vegas':       { city: 'Las Vegas, NV',       airports: ['LAS'] },
+  'vegas':           { city: 'Las Vegas, NV',       airports: ['LAS'] },
+  'washington':      { city: 'Washington DC',       airports: ['DCA', 'IAD', 'BWI'] },
+  'washington dc':   { city: 'Washington DC',       airports: ['DCA', 'IAD', 'BWI'] },
+  'dc':              { city: 'Washington DC',       airports: ['DCA', 'IAD', 'BWI'] },
+  'phoenix':         { city: 'Phoenix, AZ',         airports: ['PHX'] },
+  'detroit':         { city: 'Detroit, MI',         airports: ['DTW'] },
+  'minneapolis':     { city: 'Minneapolis, MN',     airports: ['MSP'] },
+  'portland':        { city: 'Portland, OR',        airports: ['PDX'] },
+  'salt lake city':  { city: 'Salt Lake City, UT',  airports: ['SLC'] },
+  'salt lake':       { city: 'Salt Lake City, UT',  airports: ['SLC'] },
+  'nashville':       { city: 'Nashville, TN',       airports: ['BNA'] },
+  'raleigh':         { city: 'Raleigh, NC',         airports: ['RDU'] },
+};
+
+/**
+ * Returns 0–N ZipLocation matches for a city-name query.
+ * - 0: not found
+ * - 1: unambiguous match — use it
+ * - 2+: caller should show disambiguation dropdown
+ */
+export function lookupCity(query: string): ZipLocation[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+
+  // Exact match — fastest path
+  if (CITY_NAMES[q]) return [CITY_NAMES[q]];
+
+  // Collect all keys that start with the query OR whose city string starts with it
+  const results: ZipLocation[] = [];
+  const seenCities = new Set<string>();
+
+  for (const [key, loc] of Object.entries(CITY_NAMES)) {
+    if (key.startsWith(q) || loc.city.toLowerCase().startsWith(q)) {
+      if (!seenCities.has(loc.city)) {
+        seenCities.add(loc.city);
+        results.push(loc);
+      }
+    }
+  }
+
+  // If still empty, try substring match (e.g., "jose" finds "san jose")
+  if (results.length === 0) {
+    for (const [key, loc] of Object.entries(CITY_NAMES)) {
+      if (key.includes(q) || loc.city.toLowerCase().includes(q)) {
+        if (!seenCities.has(loc.city)) {
+          seenCities.add(loc.city);
+          results.push(loc);
+        }
+      }
+    }
+  }
+
+  return results;
+}

@@ -1,64 +1,62 @@
 import React from 'react';
 import { T } from '../theme/tokens';
+import { SECTION_THEMES, type SectionThemeKey } from '../theme/section-themes';
 import { DealCardV2 } from './DealCardV2';
 import { photoForDeal } from '../utils/dest-photos';
 import type { HomepageDeal } from './DealCardV2';
 
 interface DealsSectionProps {
   title: string;
-  eyebrow: string;       // e.g. "NEAR YOU" | "WORLDWIDE" | "STAYS"
-  subhead: string;       // e.g. "Updated every 15 minutes — book direct, no middleman"
+  subhead: string;
   deals: HomepageDeal[];
-  countColor?: string;   // override for the live-count pill text color
-  countBg?: string;      // override for the live-count pill background
+  themeKey: SectionThemeKey;
 }
 
 export const DealsSection: React.FC<DealsSectionProps> = ({
   title,
-  eyebrow,
   subhead,
   deals,
-  countColor,
-  countBg,
+  themeKey,
 }) => {
   if (!deals || deals.length === 0) return null;
 
-  // Pre-compute photo assignments — anti-duplicate pass across every card
-  // in this section. The Set starts empty and grows as we iterate.
+  const theme = SECTION_THEMES[themeKey];
+
+  // Pre-compute photo assignments — anti-duplicate pass across every card in this section
   const usedInSection = new Set<string>();
   const photoUrls = deals.map(deal =>
     photoForDeal(deal.id, deal.destination_airport, usedInSection)
   );
 
   return (
-    <div style={{ padding: '0 24px 40px' }}>
-      {/* ── Section header ──────────────────────────────────────────────── */}
+    <div style={{ padding: '0 24px 48px' }}>
+      {/* ── Section header — 2A: Big Fraunces + 2B: per-section accent ── */}
       <div style={{
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'space-between',
         marginBottom: 24,
-        paddingTop: 16,
+        paddingTop: 40,
         borderTop: `1px solid ${T.border}`,
       }}>
         <div>
-          {/* Eyebrow */}
+          {/* Eyebrow — DM Sans 500, 11px, 2B accent color */}
           <div style={{
             fontSize: 11,
             fontWeight: 500,
             textTransform: 'uppercase' as const,
             letterSpacing: '0.15em',
-            color: T.accent,
+            color: theme.accent,
             fontFamily: T.font,
-            marginBottom: 6,
+            marginBottom: 8,
           }}>
-            {eyebrow}
+            {theme.eyebrow}
           </div>
 
-          {/* Big Fraunces headline */}
+          {/* Big Fraunces headline — 2A: clamp 32–48px */}
           <h2 style={{
             fontFamily: T.fontSerif,
-            fontSize: 'clamp(28px, 4vw, 48px)',
+            fontSize: 'clamp(32px, 4vw, 48px)',
             fontWeight: 600,
             color: T.primary,
             margin: 0,
@@ -67,24 +65,24 @@ export const DealsSection: React.FC<DealsSectionProps> = ({
             {title}
           </h2>
 
-          {/* Subhead */}
+          {/* Subhead — DM Sans 400 16px */}
           <p style={{
             fontSize: 16,
             color: T.textSec,
             fontFamily: T.font,
-            margin: '8px 0 0',
+            margin: '10px 0 0',
             lineHeight: 1.5,
           }}>
             {subhead}
           </p>
         </div>
 
-        {/* Live count pill */}
+        {/* Live count pill — 2B accent bg/text */}
         <div style={{
           flexShrink: 0,
           marginLeft: 24,
-          background: countBg || T.bgWarm,
-          color: countColor || T.primary,
+          background: theme.countBg,
+          color: theme.countText,
           border: `1px solid ${T.border}`,
           borderRadius: 20,
           padding: '5px 14px',
@@ -108,6 +106,8 @@ export const DealsSection: React.FC<DealsSectionProps> = ({
             key={deal.id || i}
             deal={deal}
             photoUrl={photoUrls[i]}
+            badgeBg={theme.badgeBg}
+            badgeText={theme.badgeText}
           />
         ))}
       </div>
