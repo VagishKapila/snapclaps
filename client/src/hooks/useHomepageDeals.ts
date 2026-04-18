@@ -18,12 +18,23 @@ function mapToHomepageDeal(d: Record<string, unknown>, index: number): HomepageD
   const isHotel = dealType === 'hotel';
   const isError = d.urgency_type === 'error' || Boolean(d.is_error_fare);
 
-  // booking_url: prefer affiliate_url from Travelpayouts, else existing booking_url
-  let bookingUrl = String(d.affiliate_url || d.booking_url || '');
-  if (!bookingUrl || bookingUrl === '#') {
+  // Phase 1A: Trust server-computed booking_url (already has marker=716647).
+  // Server builds: affiliate_url → https://www.aviasales.com${deal.link}&marker=716647
+  // Only use raw affiliate_url if booking_url is missing (old rows pre-server-compute).
+  // Filter: deals with no valid booking URL are dropped (return null below).
+  const serverBookingUrl = String(d.booking_url || '');
+  const rawAffiliateUrl = String(d.affiliate_url || '');
+  let bookingUrl = serverBookingUrl || rawAffiliateUrl;
+
+  // Reject completely empty or placeholder URLs
+  if (!bookingUrl || bookingUrl === '#' || bookingUrl === 'null') {
+    // For flights: we can build a safe Aviasales search URL as last resort
+    // For hotels: no link = drop the deal (avoids dead clicks)
+    if (isHotel) return null;
     bookingUrl = `https://www.aviasales.com/?marker=716647&origin=${orig}&destination=${dest}`;
   }
-  // Ensure marker is present
+
+  // Guarantee marker=716647 is always present (safety net)
   if (!bookingUrl.includes('marker=716647')) {
     bookingUrl += (bookingUrl.includes('?') ? '&' : '?') + 'marker=716647';
   }
