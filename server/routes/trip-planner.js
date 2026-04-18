@@ -62,6 +62,7 @@ router.post('/search', async (req, res) => {
       // New format (from TripPlanner.jsx Step 4)
       zip,
       destination_airport,
+      destination_freetext,   // Bug 1: user-typed destination not in seeded list
       month,
       duration,
       // Old format fields (backward compat)
@@ -85,6 +86,41 @@ router.post('/search', async (req, res) => {
     }
     if (!effectiveMonth || !/^\d{4}-\d{2}$/.test(effectiveMonth)) {
       return res.status(400).json({ error: 'month required in YYYY-MM format (e.g. "2026-10")' });
+    }
+
+    // ── Bug 1: FREETEXT destination — save and return researching state ──
+    if (effectiveDestAirport === 'FREETEXT') {
+      const homeAirports = getAirportsFromZip(effectiveZip || '');
+      const origin = homeAirports[0] || null;
+      const effectiveSessionIdFT = effectiveSessionId;
+      // Ensure column exists (idempotent migration)
+      await pool.query(`ALTER TABLE trip_searches ADD COLUMN IF NOT EXISTS destination_freetext VARCHAR(200)`).catch(() => {});
+      const { rows: [ftRow] } = await pool.query(`
+        INSERT INTO trip_searches
+          (session_id, zip_code, origin_airport, destination_airport, destination_freetext,
+           travel_month, duration_days, cabin_class, status, home_airports)
+        VALUES ($1,$2,$3,'FREETEXT',$4,$5,$6,$7,'researching',$8)
+        RETURNING id
+      `, [
+        effectiveSessionIdFT,
+        effectiveZip,
+        origin,
+        destination_freetext || null,
+        effectiveMonth,
+        effectiveDuration,
+        cabin_class,
+        origin ? [origin] : [],
+      ]).catch(() => ({ rows: [{ id: 0 }] }));
+      return res.json({
+        search_id: String(ftRow?.id || 0),
+        business: null,
+        economy: null,
+        cash_estimate: null,
+        transfer_from: [],
+        dates: [],
+        program_names_hidden: true,
+        availability_notes: `researching — ${destination_freetext || 'unknown destination'}`,
+      });
     }
 
     // ── 1. Resolve home airport from ZIP ─────────────────────────────────

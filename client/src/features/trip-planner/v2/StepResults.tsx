@@ -16,8 +16,9 @@ export interface SearchResult {
 interface Props {
   result: SearchResult;
   destination: Destination;
-  month: string;
-  duration: number;
+  month: string;          // YYYY-MM
+  duration: number | 'flex';
+  homeAirport: string;    // User's home airport IATA code (Bug 4 fix)
   onNext: () => void;
   onBack: () => void;
 }
@@ -32,8 +33,46 @@ function fmtMonth(yyyyMM: string): string {
   return `${months[parseInt(m) - 1]} ${y}`;
 }
 
+// Build Aviasales URL with correct origin, destination, and dates (Bug 4 + Bug 5)
+function buildAviasalesUrl(
+  homeAirport: string,
+  destAirport: string,
+  month: string,
+  duration: number | 'flex',
+): string {
+  // month = 'YYYY-MM', depart on 1st of month
+  const depart = `${month}-01`;
+  const params: Record<string, string> = {
+    marker: '716647',
+    origin: homeAirport || 'JFK',
+    depart_date: depart,
+  };
+  if (destAirport && destAirport !== 'FREETEXT') {
+    params.destination = destAirport;
+  }
+  if (duration !== 'flex' && typeof duration === 'number') {
+    const d = new Date(depart);
+    d.setDate(d.getDate() + duration);
+    params.return_date = d.toISOString().split('T')[0];
+  }
+  return `https://www.aviasales.com/?${new URLSearchParams(params).toString()}`;
+}
+
 // Researching state — destination has no active sweet spot yet
-function ResearchingState({ destination, onBack }: { destination: Destination; onBack: () => void }) {
+function ResearchingState({
+  destination,
+  homeAirport,
+  month,
+  duration,
+  onBack,
+}: {
+  destination: Destination;
+  homeAirport: string;
+  month: string;
+  duration: number | 'flex';
+  onBack: () => void;
+}) {
+  const aviasalesUrl = buildAviasalesUrl(homeAirport, destination.airport, month, duration);
   return (
     <div style={{ textAlign: 'center', padding: '20px 0' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>{DESTINATION_EMOJI[destination.airport] || '🌍'}</div>
@@ -49,7 +88,7 @@ function ResearchingState({ destination, onBack }: { destination: Destination; o
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
         <a
-          href={`https://www.aviasales.com/?marker=716647&origin=JFK&destination=${destination.airport}`}
+          href={aviasalesUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -144,17 +183,17 @@ function MilesCard({ label, data, cashEstimate }: {
   );
 }
 
-export default function StepResults({ result, destination, month, duration, onNext, onBack }: Props) {
+export default function StepResults({ result, destination, month, duration, homeAirport, onNext, onBack }: Props) {
   const hasActiveData = result.business || result.economy;
   const isResearching = !hasActiveData || (!result.business?.oneway_miles && !result.economy?.oneway_miles);
 
   if (isResearching && result.availability_notes && result.availability_notes.toLowerCase().includes('research')) {
-    return <ResearchingState destination={destination} onBack={onBack} />;
+    return <ResearchingState destination={destination} homeAirport={homeAirport} month={month} duration={duration} onBack={onBack} />;
   }
 
   // No active sweet spot in the DB
   if (!hasActiveData) {
-    return <ResearchingState destination={destination} onBack={onBack} />;
+    return <ResearchingState destination={destination} homeAirport={homeAirport} month={month} duration={duration} onBack={onBack} />;
   }
 
   return (
@@ -166,7 +205,7 @@ export default function StepResults({ result, destination, month, duration, onNe
             {destination.name} award options
           </h2>
           <p style={{ fontFamily: fonts.body, fontSize: 13, color: colors.gray400, margin: '4px 0 0' }}>
-            {fmtMonth(month)} · {duration} nights · prices are one-way
+            {fmtMonth(month)} · {duration === 'flex' ? 'Flexible dates' : `${duration} nights`} · prices are one-way
           </p>
         </div>
       </div>

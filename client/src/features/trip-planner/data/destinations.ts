@@ -5,11 +5,12 @@
 
 export interface Destination {
   name: string;           // City name
-  airport: string;        // IATA code
+  airport: string;        // IATA code — 'FREETEXT' for user-typed destinations not in the seeded list
   country: string;
   region: string;
   has_active_sweet_spot: boolean;
   emoji?: string;
+  is_freetext?: boolean;  // true when user typed a destination not in our seeded list
 }
 
 // Static emoji map for destinations

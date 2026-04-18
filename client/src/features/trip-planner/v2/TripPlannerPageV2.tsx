@@ -23,7 +23,7 @@ interface FormState {
   origin: string;
   destination: Destination | null;
   month: string;
-  duration: number;
+  duration: number | 'flex';
   balances: CardBalance[];
   no_cards: boolean;
 }
@@ -67,12 +67,12 @@ export default function TripPlannerPageV2() {
   }
 
   // Step 2 → processing → step 3
-  async function handleDestination(data: { destination: Destination; month: string; duration: number }) {
+  async function handleDestination(data: { destination: Destination; month: string; duration: number | 'flex' }) {
     const updated = { ...form, ...data };
     setForm(updated);
 
-    if (!data.destination.has_active_sweet_spot) {
-      // No sweet spot: jump straight to a researching state in step 3
+    // Freetext destination (not in seeded list) or no active sweet spot → researching state
+    if (data.destination.is_freetext || !data.destination.has_active_sweet_spot) {
       setSearchResult({
         search_id: 'researching',
         business: null,
@@ -84,6 +84,20 @@ export default function TripPlannerPageV2() {
         availability_notes: 'researching',
       });
       setStep(3);
+      // Save freetext search to DB (fire and forget)
+      if (data.destination.is_freetext) {
+        fetch('/api/plan/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origin: updated.origin,
+            destination_airport: 'FREETEXT',
+            destination_freetext: data.destination.name,
+            travel_month: data.month,
+            duration: typeof data.duration === 'number' ? data.duration : 7,
+          }),
+        }).catch(() => {});
+      }
       return;
     }
 
@@ -98,7 +112,7 @@ export default function TripPlannerPageV2() {
           origin: updated.origin,
           destination_airport: data.destination.airport,
           travel_month: data.month,
-          duration: data.duration,
+          duration: typeof data.duration === 'number' ? data.duration : 7,
         }),
       });
       const result = await res.json();
@@ -225,6 +239,7 @@ export default function TripPlannerPageV2() {
                   destination={form.destination!}
                   month={form.month}
                   duration={form.duration}
+                  homeAirport={form.origin}
                   onNext={handleResultsNext}
                   onBack={() => setStep(2)}
                 />

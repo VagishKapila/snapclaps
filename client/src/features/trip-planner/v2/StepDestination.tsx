@@ -4,8 +4,8 @@ import type { Destination } from '../data/destinations';
 import { DESTINATION_EMOJI, getDisplayName } from '../data/destinations';
 
 interface Props {
-  onNext: (data: { destination: Destination; month: string; duration: number }) => void;
-  initial?: { destination?: Destination | null; month?: string; duration?: number };
+  onNext: (data: { destination: Destination; month: string; duration: number | 'flex' }) => void;
+  initial?: { destination?: Destination | null; month?: string; duration?: number | 'flex' };
 }
 
 const MONTHS = [
@@ -14,13 +14,7 @@ const MONTHS = [
   'Jan 2027','Feb 2027','Mar 2027','Apr 2027','May 2027','Jun 2027',
 ];
 
-const DURATIONS = [
-  { label: '5 nights', value: 5 },
-  { label: '7 nights', value: 7 },
-  { label: '10 nights', value: 10 },
-  { label: '14 nights', value: 14 },
-  { label: '3 weeks', value: 21 },
-];
+const DURATION_NIGHTS = [3, 5, 7, 10, 14];
 
 function monthToYYYYMM(label: string): string {
   const [mon, year] = label.split(' ');
@@ -33,7 +27,7 @@ export default function StepDestination({ onNext, initial = {} }: Props) {
   const [query, setQuery] = useState(initial.destination ? getDisplayName(initial.destination) : '');
   const [selected, setSelected] = useState<Destination | null>(initial.destination || null);
   const [month, setMonth] = useState(initial.month || '');
-  const [duration, setDuration] = useState(initial.duration || 7);
+  const [duration, setDuration] = useState<number | 'flex'>(initial.duration || 7);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +50,21 @@ export default function StepDestination({ onNext, initial = {} }: Props) {
   function selectDest(d: Destination) {
     setSelected(d);
     setQuery(getDisplayName(d));
+    setShowSuggestions(false);
+    setError('');
+  }
+
+  function selectFreetext() {
+    if (!query.trim()) return;
+    const synth: Destination = {
+      name: query.trim(),
+      airport: 'FREETEXT',
+      country: '',
+      region: '',
+      has_active_sweet_spot: false,
+      is_freetext: true,
+    };
+    setSelected(synth);
     setShowSuggestions(false);
     setError('');
   }
@@ -107,7 +116,7 @@ export default function StepDestination({ onNext, initial = {} }: Props) {
           placeholder="Search cities, countries..."
           style={inputStyle}
         />
-        {showSuggestions && filtered.length > 0 && (
+        {showSuggestions && (filtered.length > 0 || query.length >= 2) && (
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -165,6 +174,29 @@ export default function StepDestination({ onNext, initial = {} }: Props) {
                 </div>
               </button>
             ))}
+            {/* Freetext fallback — always shown at the bottom when user has typed a query */}
+            {query.trim().length >= 2 && (
+              <button
+                onMouseDown={selectFreetext}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '11px 14px',
+                  border: 'none',
+                  borderTop: filtered.length > 0 ? `1px solid ${colors.gray100}` : 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: 18, minWidth: 28 }}>🔍</span>
+                <span style={{ fontFamily: fonts.body, fontSize: 14, color: colors.gray600 }}>
+                  Search <strong style={{ color: colors.warmBlack }}>"{query.trim()}"</strong> →
+                </span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -190,26 +222,43 @@ export default function StepDestination({ onNext, initial = {} }: Props) {
           Trip length
         </label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {DURATIONS.map(d => (
+          {DURATION_NIGHTS.map(n => (
             <button
-              key={d.value}
-              onClick={() => setDuration(d.value)}
+              key={n}
+              onClick={() => setDuration(n)}
               style={{
                 padding: '9px 16px',
                 borderRadius: radius.full,
-                border: `1.5px solid ${duration === d.value ? colors.emerald : colors.gray200}`,
-                background: duration === d.value ? colors.emeraldFaint : colors.white,
+                border: `1.5px solid ${duration === n ? colors.emerald : colors.gray200}`,
+                background: duration === n ? colors.emeraldFaint : colors.white,
                 fontFamily: fonts.body,
                 fontSize: 13,
-                fontWeight: duration === d.value ? 600 : 400,
-                color: duration === d.value ? colors.emerald : colors.gray600,
+                fontWeight: duration === n ? 600 : 400,
+                color: duration === n ? colors.emerald : colors.gray600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
-              {d.label}
+              {n} nights
             </button>
           ))}
+          <button
+            onClick={() => setDuration('flex')}
+            style={{
+              padding: '9px 16px',
+              borderRadius: radius.full,
+              border: `1.5px solid ${duration === 'flex' ? colors.emerald : colors.gray200}`,
+              background: duration === 'flex' ? colors.emeraldFaint : colors.white,
+              fontFamily: fonts.body,
+              fontSize: 13,
+              fontWeight: duration === 'flex' ? 600 : 400,
+              color: duration === 'flex' ? colors.emerald : colors.gray600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Flexible
+          </button>
         </div>
       </div>
 
@@ -235,7 +284,7 @@ export default function StepDestination({ onNext, initial = {} }: Props) {
           boxShadow: (!selected || !month) ? 'none' : shadows.card,
         }}
       >
-        {selected && !selected.has_active_sweet_spot ? 'Notify me when ready →' : 'See award options →'}
+        {selected?.is_freetext ? 'Browse flights →' : selected && !selected.has_active_sweet_spot ? 'Notify me when ready →' : 'See award options →'}
       </button>
     </div>
   );
