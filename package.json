@@ -1,6 +1,6 @@
 {
   "name": "snapclaps",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "SnapClaps — AI Travel Deals & Points Concierge",
   "main": "server.js",
   "scripts": {
